@@ -198,6 +198,7 @@ main {
 }
 
 .feature {
+  position: relative;
   min-height: 100vh;
   display: grid;
   align-items: end;

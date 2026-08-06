@@ -128,7 +128,7 @@ function Hero() {
     <section ref={wrap} className="hero scene" {...bind()}>
       <video
         className="hero__video"
-        src="https://videos.pexels.com/video-files/6963744/6963744-uhd_2560_1440_25fps.mp4"
+        src="/videos/hero.mp4"
         autoPlay
         muted
         loop
@@ -359,7 +359,7 @@ function Manifesto() {
   return (
     <section className="manifesto scene">
       <video
-        src="https://videos.pexels.com/video-files/853919/853919-hd_1920_1080_25fps.mp4"
+        src="/videos/manifesto.mp4"
         autoPlay
         muted
         loop

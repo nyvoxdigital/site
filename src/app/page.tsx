@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useGesture } from "@use-gesture/react";
 import SplitType from "split-type";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiArrowUpRight, FiMail } from "react-icons/fi";
+import { FiArrowRight, FiArrowUpRight, FiMail } from "react-icons/fi";
 import type { Mesh } from "three";
 import { gallery, projects } from "@/lib/works";
 
@@ -85,6 +85,8 @@ function Hero() {
 
   useEffect(() => {
     if (!wrap.current || !headline.current) return;
+    if (window.matchMedia("(max-width: 700px)").matches) return;
+
     const split = new SplitType(headline.current, { types: "chars,words" });
 
     gsap.set(split.chars, { transformOrigin: "50% 55%" });
@@ -189,21 +191,30 @@ function HorizontalStory({ setCursor }: { setCursor: (mode: CursorMode) => void 
 
   useEffect(() => {
     if (!section.current || !track.current) return;
-    const tween = gsap.to(track.current, {
-      x: () => -(track.current!.scrollWidth - window.innerWidth + 96),
-      ease: "none",
-      scrollTrigger: {
-        trigger: section.current,
-        start: "top top",
-        end: () => `+=${track.current!.scrollWidth}`,
-        scrub: 1,
-        pin: true,
-        invalidateOnRefresh: true
-      }
+
+    const media = gsap.matchMedia();
+
+    media.add("(min-width: 901px)", () => {
+      const tween = gsap.to(track.current, {
+        x: () => -(track.current!.scrollWidth - window.innerWidth + 96),
+        ease: "none",
+        scrollTrigger: {
+          trigger: section.current,
+          start: "top top",
+          end: () => `+=${track.current!.scrollWidth}`,
+          scrub: 1,
+          pin: true,
+          invalidateOnRefresh: true
+        }
+      });
+
+      return () => {
+        tween.kill();
+      };
     });
 
     return () => {
-      tween.kill();
+      media.revert();
     };
   }, []);
 
@@ -369,6 +380,62 @@ function Manifesto() {
   );
 }
 
+function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
+  return (
+    <section className="hire scene" id="contrate">
+      <div className="hire__copy">
+        <p className="kicker">Contrate / briefing inicial</p>
+        <h2>
+          Vamos desenhar
+          <br />
+          sua próxima
+          <br />
+          campanha.
+        </h2>
+      </div>
+
+      <form className="hire__form" aria-label="Formulario para contratar">
+        <label className="field">
+          <span>Nome</span>
+          <input name="nome" type="text" autoComplete="name" placeholder="Seu nome" required />
+        </label>
+
+        <fieldset className="choice-field">
+          <legend>O que você precisa?</legend>
+          <div className="choice-grid">
+            {["foto", "video", "ambos"].map((option) => (
+              <label className="choice" key={option}>
+                <input name="tipo_projeto" type="radio" value={option} required />
+                <span>{option === "video" ? "Vídeo" : option.charAt(0).toUpperCase() + option.slice(1)}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <label className="field">
+          <span>Até quanto está disposto a investir?</span>
+          <input name="investimento" type="text" inputMode="decimal" placeholder="Ex: R$ 3.000" required />
+        </label>
+
+        <label className="field">
+          <span>E-mail</span>
+          <input name="email" type="email" autoComplete="email" placeholder="voce@email.com" required />
+        </label>
+
+        <button
+          className="hire__submit"
+          type="submit"
+          onMouseEnter={() => setCursor("link")}
+          onMouseLeave={() => setCursor("default")}
+        >
+          Enviar briefing
+          <FiArrowRight />
+        </button>
+      </form>
+    </section>
+  );
+}
+
 function Contact({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   return (
     <footer className="contact scene">
@@ -438,6 +505,7 @@ export default function Home() {
       <Gallery setCursor={setCursor} />
       <DepthShowcase />
       <Manifesto />
+      <Hire setCursor={setCursor} />
       <Contact setCursor={setCursor} />
     </main>
   );

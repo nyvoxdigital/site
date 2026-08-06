@@ -17,6 +17,7 @@ html {
   color: var(--ink);
   cursor: none;
   overscroll-behavior: none;
+  overflow-x: hidden;
 }
 
 body {
@@ -25,6 +26,7 @@ body {
   color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
   letter-spacing: 0;
+  overflow-x: hidden;
 }
 
 button,
@@ -155,6 +157,7 @@ main {
   line-height: 0.78;
   letter-spacing: 0;
   text-transform: uppercase;
+  overflow-wrap: normal;
 }
 
 .hero h1 {
@@ -446,6 +449,152 @@ main {
   margin-left: auto;
 }
 
+.hire {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(24rem, 0.72fr);
+  gap: clamp(3rem, 8vw, 9rem);
+  align-items: center;
+  padding: 8vw;
+  background:
+    linear-gradient(90deg, rgba(165, 71, 54, 0.12), transparent 30%),
+    #050505;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.hire::before {
+  content: "";
+  position: absolute;
+  inset: 8vw;
+  z-index: -1;
+  border: 1px solid rgba(242, 239, 230, 0.08);
+  pointer-events: none;
+}
+
+.hire__copy h2 {
+  max-width: 10ch;
+  margin: 1rem 0 0;
+  font-size: clamp(3.5rem, 8.8vw, 11rem);
+  font-weight: 800;
+  line-height: 0.82;
+  text-transform: uppercase;
+}
+
+.hire__form {
+  display: grid;
+  gap: 1.35rem;
+  padding-top: 10vh;
+}
+
+.field,
+.choice-field {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field span,
+.choice-field legend {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.field input {
+  width: 100%;
+  min-height: 4.4rem;
+  border: 0;
+  border-bottom: 1px solid rgba(242, 239, 230, 0.28);
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: clamp(1.35rem, 2vw, 2.1rem);
+  letter-spacing: 0;
+  transition: border-color 320ms ease, background 320ms ease;
+}
+
+.field input::placeholder {
+  color: rgba(242, 239, 230, 0.3);
+}
+
+.field input:focus {
+  border-color: var(--ink);
+  background: rgba(242, 239, 230, 0.025);
+}
+
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.7rem;
+}
+
+.choice {
+  position: relative;
+  min-height: 4.2rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(242, 239, 230, 0.18);
+  color: var(--ink);
+}
+
+.choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.choice span {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(0.92rem, 1vw, 1.08rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.choice::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  transform: translateY(101%);
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.choice:has(input:checked)::before {
+  transform: translateY(0);
+}
+
+.choice:has(input:checked) span {
+  color: #050505;
+}
+
+.hire__submit {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(242, 239, 230, 0.3);
+  background: var(--ink);
+  color: #050505;
+  padding: 1.1rem 1.35rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1), background 320ms ease;
+}
+
+.hire__submit:hover {
+  transform: translateX(0.35rem);
+  background: #ffffff;
+}
+
 .contact {
   min-height: 105vh;
   display: grid;
@@ -491,15 +640,39 @@ main {
   .hero,
   .feature,
   .manifesto,
+  .hire,
   .contact {
     padding: 1.25rem;
   }
 
-  .hero h1,
+  .scene {
+    min-height: auto;
+  }
+
+  .hero {
+    min-height: 100svh;
+    height: auto;
+    align-items: center;
+  }
+
+  .hero__copy {
+    width: 100%;
+    max-width: calc(100vw - 2.5rem);
+  }
+
+  .hero h1 {
+    max-width: 100%;
+    font-size: clamp(3.05rem, 13vw, 5.1rem);
+    line-height: 0.88;
+  }
+
   .feature h2,
   .manifesto h2,
-  .contact h2 {
-    font-size: clamp(3.6rem, 18vw, 7.8rem);
+  .contact h2,
+  .hire__copy h2 {
+    max-width: 100%;
+    font-size: clamp(3.15rem, 14.5vw, 6.8rem);
+    line-height: 0.86;
   }
 
   .feature video {
@@ -533,6 +706,14 @@ main {
     padding: 7rem 1.25rem;
   }
 
+  .interlude h2,
+  .gallery__intro h2,
+  .depth__copy h2 {
+    max-width: 100%;
+    font-size: clamp(2.75rem, 12vw, 5.6rem);
+    line-height: 0.94;
+  }
+
   .gallery__wall {
     display: flex;
     flex-direction: column;
@@ -546,6 +727,15 @@ main {
     margin: 0;
   }
 
+  .viewer {
+    padding: 1.25rem;
+  }
+
+  .viewer__media {
+    width: 100%;
+    height: 68vh;
+  }
+
   .depth__copy {
     left: 1.25rem;
     right: 1.25rem;
@@ -554,5 +744,74 @@ main {
 
   .interlude {
     padding: 8rem 1.25rem;
+  }
+
+  .hire {
+    grid-template-columns: 1fr;
+    align-content: center;
+    gap: 3rem;
+    min-height: 100svh;
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+    scroll-margin-top: 0;
+  }
+
+  .hire::before {
+    inset: 1.25rem;
+  }
+
+  .hire__form {
+    padding-top: 0;
+  }
+
+  .choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field input {
+    min-height: 3.8rem;
+    font-size: clamp(1.15rem, 6vw, 1.65rem);
+  }
+
+  .contact {
+    min-height: 100svh;
+  }
+
+  .contact nav {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 3rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .hero h1 {
+    font-size: clamp(2.7rem, 12.25vw, 3.35rem);
+  }
+
+  .feature h2,
+  .manifesto h2,
+  .contact h2,
+  .hire__copy h2 {
+    font-size: clamp(2.8rem, 13vw, 4.2rem);
+  }
+
+  .feature__meta {
+    flex-wrap: wrap;
+    gap: 0.45rem 0.9rem;
+  }
+
+  .h-card,
+  .h-card--1,
+  .h-card--2,
+  .gallery__item,
+  .gallery__item--1,
+  .gallery__item--5 {
+    height: 52vh;
+  }
+
+  .hire__submit {
+    width: 100%;
+    justify-content: center;
   }
 }

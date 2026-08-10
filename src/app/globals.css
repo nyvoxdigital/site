@@ -8,6 +8,15 @@
   --line: rgba(247, 242, 232, 0.14);
   --accent: #e0423b;
   --display-lh: 1.12;
+  --font-display-fallback: Arial, Helvetica, sans-serif;
+}
+
+.hero h1,
+.section-heading h2,
+.hire__copy h2,
+.contact h2,
+.work-card h3 {
+  font-family: var(--font-display), var(--font-display-fallback);
 }
 
 * {
@@ -26,7 +35,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   letter-spacing: 0;
   overflow-x: hidden;
 }
@@ -184,7 +193,7 @@ main {
 
 .hero h1 {
   margin: 0.8rem 0 0;
-  font-size: clamp(4.3rem, 10.8vw, 12.5rem);
+  font-size: clamp(3.4rem, 8.6vw, 10rem);
   font-weight: 900;
   line-height: var(--display-lh);
   letter-spacing: 0;
@@ -225,7 +234,7 @@ main {
 .section-heading h2 {
   max-width: 12ch;
   margin: 0;
-  font-size: clamp(2.6rem, 6.5vw, 7.5rem);
+  font-size: clamp(2.1rem, 5.2vw, 6rem);
   font-weight: 900;
   line-height: var(--display-lh);
   text-align: right;
@@ -292,7 +301,7 @@ main {
 .work-card h3 {
   max-width: 100%;
   margin: 0.7rem 0 0;
-  font-size: clamp(1.9rem, 3.6vw, 3.4rem);
+  font-size: clamp(1.6rem, 3vw, 2.8rem);
   font-weight: 900;
   line-height: var(--display-lh);
   text-transform: uppercase;
@@ -318,7 +327,7 @@ main {
 .hire__copy h2 {
   max-width: 10ch;
   margin: 0.9rem 0 1.3rem;
-  font-size: clamp(2.8rem, 7vw, 8.8rem);
+  font-size: clamp(2.2rem, 5.6vw, 7rem);
   font-weight: 900;
   line-height: var(--display-lh);
   text-transform: uppercase;
@@ -479,7 +488,7 @@ main {
 .contact h2 {
   max-width: 10ch;
   margin: 0.8rem 0 0;
-  font-size: clamp(3.2rem, 8vw, 9rem);
+  font-size: clamp(2.6rem, 6.4vw, 7.2rem);
   font-weight: 900;
   line-height: var(--display-lh);
   text-transform: uppercase;
@@ -534,7 +543,7 @@ main {
   }
 
   .hero h1 {
-    font-size: clamp(3.1rem, 14vw, 5.4rem);
+    font-size: clamp(2.6rem, 11vw, 4.4rem);
   }
 
   .portfolio,
@@ -551,7 +560,7 @@ main {
   .section-heading h2 {
     max-width: 100%;
     text-align: left;
-    font-size: clamp(2.5rem, 12vw, 4.6rem);
+    font-size: clamp(2rem, 9.5vw, 3.7rem);
   }
 
   .work-grid,
@@ -572,7 +581,7 @@ main {
   .hire__copy h2,
   .contact h2 {
     max-width: 100%;
-    font-size: clamp(2.7rem, 13vw, 4.8rem);
+    font-size: clamp(2.2rem, 10vw, 3.8rem);
   }
 
   .choice-grid {
@@ -596,6 +605,6 @@ main {
   }
 
   .work-card h3 {
-    font-size: clamp(1.7rem, 8.5vw, 2.6rem);
+    font-size: clamp(1.4rem, 7vw, 2.1rem);
   }
 }

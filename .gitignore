@@ -9,3 +9,6 @@ build
 .env*
 !.env.example
 tsconfig.tsbuildinfo
+
+# raw/uncompressed source footage — not web assets, never commit (multi-GB)
+/videos/

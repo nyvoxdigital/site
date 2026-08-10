@@ -1,33 +1,26 @@
 "use client";
 
-import { Canvas, useFrame } from "@react-three/fiber";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
-import { AnimatePresence, motion } from "framer-motion";
-import { useGesture } from "@use-gesture/react";
-import SplitType from "split-type";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiArrowRight, FiArrowUpRight, FiMail } from "react-icons/fi";
-import type { Mesh } from "three";
-import { gallery, projects } from "@/lib/works";
+import { projects } from "@/lib/works";
 
 gsap.registerPlugin(ScrollTrigger);
 
-type CursorMode = "default" | "open" | "play" | "link";
+type CursorMode = "default" | "play" | "link";
 
 function useCinematicScroll() {
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.35,
-      lerp: 0.08,
+      duration: 1,
+      lerp: 0.12,
       smoothWheel: true,
-      wheelMultiplier: 0.86
+      wheelMultiplier: 0.9
     });
 
-    const update = (time: number) => {
-      lenis.raf(time * 1000);
-    };
+    const update = (time: number) => lenis.raf(time * 1000);
 
     gsap.ticker.add(update);
     gsap.ticker.lagSmoothing(0);
@@ -42,7 +35,7 @@ function useCinematicScroll() {
 
 function Cursor({ mode }: { mode: CursorMode }) {
   const dot = useRef<HTMLDivElement>(null);
-  const label = mode === "open" ? "OPEN" : mode === "play" ? "PLAY" : "";
+  const label = mode === "play" ? "PLAY" : "";
 
   useEffect(() => {
     const cursor = dot.current;
@@ -52,6 +45,7 @@ function Cursor({ mode }: { mode: CursorMode }) {
     let y = window.innerHeight / 2;
     let tx = x;
     let ty = y;
+    let frame = 0;
 
     const move = (event: PointerEvent) => {
       tx = event.clientX;
@@ -62,13 +56,16 @@ function Cursor({ mode }: { mode: CursorMode }) {
       x += (tx - x) * 0.18;
       y += (ty - y) * 0.18;
       cursor.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
-      requestAnimationFrame(tick);
+      frame = requestAnimationFrame(tick);
     };
 
     window.addEventListener("pointermove", move);
-    tick();
+    frame = requestAnimationFrame(tick);
 
-    return () => window.removeEventListener("pointermove", move);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      cancelAnimationFrame(frame);
+    };
   }, []);
 
   return (
@@ -78,163 +75,101 @@ function Cursor({ mode }: { mode: CursorMode }) {
   );
 }
 
-function Hero() {
-  const wrap = useRef<HTMLElement>(null);
-  const headline = useRef<HTMLHeadingElement>(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+function SiteHeader({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
+  const [solid, setSolid] = useState(false);
 
   useEffect(() => {
-    if (!wrap.current || !headline.current) return;
-    if (window.matchMedia("(max-width: 700px)").matches) return;
-
-    const split = new SplitType(headline.current, { types: "chars,words" });
-
-    gsap.set(split.chars, { transformOrigin: "50% 55%" });
-    const timeline = gsap.timeline({
-      scrollTrigger: {
-        trigger: wrap.current,
-        start: "top top",
-        end: "bottom top",
-        scrub: 1.15
-      }
-    });
-
-    timeline
-      .to(split.chars, {
-        x: () => gsap.utils.random(-160, 160),
-        y: () => gsap.utils.random(-120, 80),
-        rotationZ: () => gsap.utils.random(-18, 18),
-        opacity: 0,
-        filter: "blur(12px)",
-        stagger: { amount: 0.8, from: "random" }
-      })
-      .to(".hero__video", { scale: 1.18, filter: "brightness(0.26)" }, 0);
-
-    return () => {
-      timeline.kill();
-      split.revert();
-    };
+    const onScroll = () => setSolid(window.scrollY > 40);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const bind = useGesture({
-    onMove: ({ xy: [x, y] }) => {
-      const nx = (x / window.innerWidth - 0.5) * 2;
-      const ny = (y / window.innerHeight - 0.5) * 2;
-      setTilt({ x: nx, y: ny });
-    }
-  });
+  return (
+    <header className={`site-header${solid ? " site-header--solid" : ""}`}>
+      <a
+        href="#topo"
+        className="site-header__brand"
+        onMouseEnter={() => setCursor("link")}
+        onMouseLeave={() => setCursor("default")}
+      >
+        Studio Motion
+      </a>
+      <nav aria-label="Navegacao principal">
+        <a href="#portfolio" onMouseEnter={() => setCursor("link")} onMouseLeave={() => setCursor("default")}>
+          Trabalhos
+        </a>
+        <a href="#contrate" onMouseEnter={() => setCursor("link")} onMouseLeave={() => setCursor("default")}>
+          Orçamento
+        </a>
+      </nav>
+    </header>
+  );
+}
+
+function Hero() {
+  const video = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    video.current?.play().catch(() => {});
+  }, []);
 
   return (
-    <section ref={wrap} className="hero scene" {...bind()}>
+    <section className="hero" id="topo">
       <video
+        ref={video}
         className="hero__video"
-        src="/videos/hero.mp4"
+        src="/videos/lagoinha-praia-grande-hero-web.mp4"
         autoPlay
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="auto"
       />
       <div className="grain" />
-      <div
-        className="hero__copy"
-        style={{
-          transform: `translate3d(${tilt.x * -16}px, ${tilt.y * -12}px, 0)`
-        }}
-      >
-        <p className="kicker">Scene 01 / private exhibition</p>
-        <h1 ref={headline}>
-          CREATE
+      <div className="hero__copy">
+        <p className="kicker">Filmes / campanhas / conteúdo</p>
+        <h1>
+          VIDEO
           <br />
-          EXPERIENCES
+          QUE FAZ
           <br />
-          NOT WEBSITES.
+          MARCA
         </h1>
       </div>
-      <span className="scroll-cue">Scroll</span>
+      <span className="scroll-cue">Role</span>
     </section>
   );
 }
 
-function FeaturedProjects({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
+function Portfolio({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   return (
-    <section className="feature-strip scene">
-      {projects.slice(0, 3).map((project, index) => (
-        <article
-          className="feature"
-          key={project.title}
-          onMouseEnter={(event) => {
-            setCursor("play");
-            event.currentTarget.querySelector("video")?.play();
-          }}
-          onMouseLeave={(event) => {
-            setCursor("default");
-            event.currentTarget.querySelector("video")?.pause();
-          }}
-        >
-          <video src={project.video} muted loop playsInline preload="metadata" />
-          <div className="feature__meta">
-            <span>{String(index + 2).padStart(2, "0")}</span>
-            <span>{project.category}</span>
-            <span>{project.year}</span>
-          </div>
-          <h2>{project.title}</h2>
-        </article>
-      ))}
-    </section>
-  );
-}
+    <section className="portfolio" id="portfolio">
+      <div className="section-heading">
+        <p className="kicker">Portfolio</p>
+        <h2>Trabalhos em vídeo</h2>
+      </div>
 
-function HorizontalStory({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
-  const section = useRef<HTMLElement>(null);
-  const track = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!section.current || !track.current) return;
-
-    const media = gsap.matchMedia();
-
-    media.add("(min-width: 901px)", () => {
-      const tween = gsap.to(track.current, {
-        x: () => -(track.current!.scrollWidth - window.innerWidth + 96),
-        ease: "none",
-        scrollTrigger: {
-          trigger: section.current,
-          start: "top top",
-          end: () => `+=${track.current!.scrollWidth}`,
-          scrub: 1,
-          pin: true,
-          invalidateOnRefresh: true
-        }
-      });
-
-      return () => {
-        tween.kill();
-      };
-    });
-
-    return () => {
-      media.revert();
-    };
-  }, []);
-
-  return (
-    <section ref={section} className="horizontal scene">
-      <div ref={track} className="horizontal__track">
-        {projects.map((project, index) => (
+      <div className="work-grid">
+        {projects.map((project) => (
           <article
-            className={`h-card h-card--${index % 3}`}
-            key={`${project.title}-horizontal`}
-            onMouseEnter={() => setCursor("open")}
-            onMouseLeave={() => setCursor("default")}
+            className="work-card"
+            key={project.title}
+            onMouseEnter={(event) => {
+              setCursor("play");
+              event.currentTarget.querySelector("video")?.play();
+            }}
+            onMouseLeave={(event) => {
+              setCursor("default");
+              event.currentTarget.querySelector("video")?.play();
+            }}
           >
-            <img src={project.image} alt="" loading="lazy" />
-            <div>
-              <p>
-                {project.category} / {project.year}
-              </p>
-              <h3>{project.title}</h3>
+            <video src={project.video} autoPlay muted loop playsInline preload="metadata" />
+            <div className="work-card__meta">
+              <span>{project.category}</span>
+              <span>{project.year}</span>
             </div>
+            <h3>{project.title}</h3>
           </article>
         ))}
       </div>
@@ -242,149 +177,11 @@ function HorizontalStory({ setCursor }: { setCursor: (mode: CursorMode) => void 
   );
 }
 
-function Gallery({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
-  const [active, setActive] = useState<(typeof gallery)[number] | null>(null);
-
-  return (
-    <section className="gallery scene">
-      <div className="gallery__intro">
-        <p className="kicker">Scene 05 / infinite wall</p>
-        <h2>Fragments from the archive keep rearranging themselves.</h2>
-      </div>
-      <div className="gallery__wall">
-        {gallery.map((item, index) => (
-          <button
-            className={`gallery__item gallery__item--${index % 6}`}
-            key={item.src}
-            onClick={() => setActive(item)}
-            onMouseEnter={() => setCursor("open")}
-            onMouseLeave={() => setCursor("default")}
-            aria-label={`Open ${item.title}`}
-          >
-            {item.kind === "video" ? (
-              <video src={item.src} muted loop playsInline preload="metadata" />
-            ) : (
-              <img src={item.src} alt="" loading="lazy" />
-            )}
-            <span>{item.title}</span>
-          </button>
-        ))}
-      </div>
-      <AnimatePresence>
-        {active && (
-          <motion.div
-            className="viewer"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setActive(null)}
-          >
-            <motion.div
-              className="viewer__media"
-              initial={{ scale: 0.94, filter: "blur(14px)" }}
-              animate={{ scale: 1, filter: "blur(0px)" }}
-              exit={{ scale: 0.96, filter: "blur(10px)" }}
-            >
-              {active.kind === "video" ? (
-                <video src={active.src} autoPlay muted loop playsInline />
-              ) : (
-                <img src={active.src} alt="" />
-              )}
-            </motion.div>
-            <button type="button">Close</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
-}
-
-function FloatingFrame({
-  position,
-  color,
-  speed
-}: {
-  position: [number, number, number];
-  color: string;
-  speed: number;
-}) {
-  const mesh = useRef<Mesh>(null);
-
-  useFrame(({ clock, pointer }) => {
-    if (!mesh.current) return;
-    const time = clock.getElapsedTime();
-    mesh.current.rotation.x = Math.sin(time * speed) * 0.12 + pointer.y * 0.08;
-    mesh.current.rotation.y = Math.cos(time * speed * 0.8) * 0.16 + pointer.x * 0.12;
-    mesh.current.position.z = position[2] + Math.sin(time * speed + position[0]) * 0.24;
-  });
-
-  return (
-    <mesh ref={mesh} position={position}>
-      <boxGeometry args={[2.1, 1.28, 0.035]} />
-      <meshStandardMaterial color={color} roughness={0.42} metalness={0.18} />
-    </mesh>
-  );
-}
-
-function DepthShowcase() {
-  const frames = useMemo(
-    () => [
-      { position: [-2.5, 1.1, -1.2] as [number, number, number], color: "#d8d5cb", speed: 0.6 },
-      { position: [0.25, -0.2, -0.45] as [number, number, number], color: "#373737", speed: 0.8 },
-      { position: [2.65, 0.85, -1.05] as [number, number, number], color: "#a04736", speed: 0.5 },
-      { position: [-0.9, -1.45, -1.7] as [number, number, number], color: "#6d746b", speed: 0.7 }
-    ],
-    []
-  );
-
-  return (
-    <section className="depth scene">
-      <Canvas camera={{ position: [0, 0, 5.1], fov: 42 }} dpr={[1, 1.6]}>
-        <color attach="background" args={["#050505"]} />
-        <ambientLight intensity={0.9} />
-        <directionalLight position={[2, 4, 4]} intensity={1.65} />
-        {frames.map((frame) => (
-          <FloatingFrame key={frame.color} {...frame} />
-        ))}
-      </Canvas>
-      <div className="depth__copy">
-        <p className="kicker">Scene 06 / depth study</p>
-        <h2>Projects suspended in a quiet field of perspective.</h2>
-      </div>
-    </section>
-  );
-}
-
-function Manifesto() {
-  return (
-    <section className="manifesto scene">
-      <video
-        src="/videos/manifesto.mp4"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-      />
-      <div>
-        <p className="kicker">Scene 07 / manifesto</p>
-        <h2>
-          WE BUILD
-          <br />
-          MEMORABLE
-          <br />
-          DIGITAL STORIES.
-        </h2>
-      </div>
-    </section>
-  );
-}
-
 function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   return (
-    <section className="hire scene" id="contrate">
+    <section className="hire" id="contrate">
       <div className="hire__copy">
-        <p className="kicker">Contrate / briefing inicial</p>
+        <p className="kicker">Briefing inicial</p>
         <h2>
           Vamos desenhar
           <br />
@@ -392,34 +189,55 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
           <br />
           campanha.
         </h2>
+        <p>
+          Me conte o básico do projeto e eu retorno com o melhor formato para gravação, edição e entrega.
+        </p>
       </div>
 
       <form className="hire__form" aria-label="Formulario para contratar">
-        <label className="field">
-          <span>Nome</span>
-          <input name="nome" type="text" autoComplete="name" placeholder="Seu nome" required />
-        </label>
+        <div className="form-row">
+          <label className="field">
+            <span>Nome</span>
+            <input name="nome" type="text" autoComplete="name" placeholder="Seu nome" required />
+          </label>
+
+          <label className="field">
+            <span>E-mail</span>
+            <input name="email" type="email" autoComplete="email" placeholder="voce@email.com" required />
+          </label>
+        </div>
 
         <fieldset className="choice-field">
           <legend>O que você precisa?</legend>
           <div className="choice-grid">
-            {["foto", "video", "ambos"].map((option) => (
-              <label className="choice" key={option}>
-                <input name="tipo_projeto" type="radio" value={option} required />
-                <span>{option === "video" ? "Vídeo" : option.charAt(0).toUpperCase() + option.slice(1)}</span>
+            {[
+              ["foto", "Foto"],
+              ["video", "Vídeo"],
+              ["ambos", "Foto + vídeo"]
+            ].map(([value, label]) => (
+              <label className="choice" key={value}>
+                <input name="tipo_projeto" type="radio" value={value} required />
+                <span>{label}</span>
               </label>
             ))}
           </div>
         </fieldset>
 
-        <label className="field">
-          <span>Até quanto está disposto a investir?</span>
-          <input name="investimento" type="text" inputMode="decimal" placeholder="Ex: R$ 3.000" required />
-        </label>
+        <div className="form-row">
+          <label className="field">
+            <span>Investimento</span>
+            <input name="investimento" type="text" inputMode="decimal" placeholder="Ex: R$ 3.000" required />
+          </label>
 
-        <label className="field">
-          <span>E-mail</span>
-          <input name="email" type="email" autoComplete="email" placeholder="voce@email.com" required />
+          <label className="field">
+            <span>Prazo</span>
+            <input name="prazo" type="text" placeholder="Ex: este mês" />
+          </label>
+        </div>
+
+        <label className="field field--textarea">
+          <span>Resumo do projeto</span>
+          <textarea name="mensagem" placeholder="Marca, ideia, cidade, referência ou objetivo da campanha." />
         </label>
 
         <button
@@ -438,17 +256,13 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
 
 function Contact({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   return (
-    <footer className="contact scene">
-      <p className="kicker">Final scene</p>
-      <h2>
-        Let&apos;s create
-        <br />
-        something
-        <br />
-        remarkable.
-      </h2>
-      <nav aria-label="Contact links">
-        {["hello@notwebsites.studio", "Instagram", "Vimeo"].map((item) => (
+    <footer className="contact">
+      <div>
+        <p className="kicker">Contato direto</p>
+        <h2>Vamos criar algo que fique.</h2>
+      </div>
+      <nav aria-label="Links de contato">
+        {["contato@studiomotion.com.br", "Instagram", "Vimeo"].map((item) => (
           <a
             href={item.includes("@") ? `mailto:${item}` : "#"}
             key={item}
@@ -471,22 +285,21 @@ export default function Home() {
 
   useEffect(() => {
     const context = gsap.context(() => {
-      gsap.utils.toArray<HTMLElement>(".scene").forEach((scene) => {
-        gsap.fromTo(
-          scene,
-          { opacity: 0.68, filter: "blur(10px)" },
-          {
-            opacity: 1,
-            filter: "blur(0px)",
-            scrollTrigger: {
-              trigger: scene,
-              start: "top 86%",
-              end: "top 35%",
-              scrub: true
-            }
+      gsap.fromTo(
+        ".work-card, .hire__copy, .hire__form, .contact",
+        { opacity: 0, y: 36 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: "power3.out",
+          stagger: 0.08,
+          scrollTrigger: {
+            trigger: ".portfolio",
+            start: "top 75%"
           }
-        );
-      });
+        }
+      );
     });
 
     return () => context.revert();
@@ -495,16 +308,9 @@ export default function Home() {
   return (
     <main>
       <Cursor mode={cursor} />
+      <SiteHeader setCursor={setCursor} />
       <Hero />
-      <section className="interlude scene">
-        <p className="kicker">Scene 02 / transition</p>
-        <h2>Letters fall away. The room opens. The work begins to breathe.</h2>
-      </section>
-      <FeaturedProjects setCursor={setCursor} />
-      <HorizontalStory setCursor={setCursor} />
-      <Gallery setCursor={setCursor} />
-      <DepthShowcase />
-      <Manifesto />
+      <Portfolio setCursor={setCursor} />
       <Hire setCursor={setCursor} />
       <Contact setCursor={setCursor} />
     </main>

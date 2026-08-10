@@ -7,6 +7,7 @@
   --panel: #11110f;
   --line: rgba(247, 242, 232, 0.14);
   --accent: #e0423b;
+  --display-lh: 1.05;
 }
 
 * {
@@ -185,7 +186,7 @@ main {
   margin: 0.8rem 0 0;
   font-size: clamp(4.3rem, 10.8vw, 12.5rem);
   font-weight: 900;
-  line-height: 0.78;
+  line-height: var(--display-lh);
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -226,7 +227,7 @@ main {
   margin: 0;
   font-size: clamp(2.6rem, 6.5vw, 7.5rem);
   font-weight: 900;
-  line-height: 0.86;
+  line-height: var(--display-lh);
   text-align: right;
   text-transform: uppercase;
 }
@@ -293,7 +294,7 @@ main {
   margin: 0.7rem 0 0;
   font-size: clamp(1.9rem, 3.6vw, 3.4rem);
   font-weight: 900;
-  line-height: 0.92;
+  line-height: var(--display-lh);
   text-transform: uppercase;
   overflow-wrap: break-word;
 }
@@ -319,7 +320,7 @@ main {
   margin: 0.9rem 0 1.3rem;
   font-size: clamp(2.8rem, 7vw, 8.8rem);
   font-weight: 900;
-  line-height: 0.84;
+  line-height: var(--display-lh);
   text-transform: uppercase;
 }
 
@@ -480,7 +481,7 @@ main {
   margin: 0.8rem 0 0;
   font-size: clamp(3.2rem, 8vw, 9rem);
   font-weight: 900;
-  line-height: 0.86;
+  line-height: var(--display-lh);
   text-transform: uppercase;
 }
 
@@ -534,7 +535,6 @@ main {
 
   .hero h1 {
     font-size: clamp(3.1rem, 14vw, 5.4rem);
-    line-height: 0.84;
   }
 
   .portfolio,

@@ -7,7 +7,7 @@
   --panel: #11110f;
   --line: rgba(247, 242, 232, 0.14);
   --accent: #e0423b;
-  --display-lh: 1.05;
+  --display-lh: 1.12;
 }
 
 * {
@@ -26,7 +26,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
   letter-spacing: 0;
   overflow-x: hidden;
 }

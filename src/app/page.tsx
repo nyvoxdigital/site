@@ -130,7 +130,7 @@ function Hero() {
       <div className="hero__copy">
         <p className="kicker">Filmes / campanhas / conteúdo</p>
         <h1>
-          VIDEO
+          VÍDEO
           <br />
           QUE FAZ
           <br />
@@ -146,7 +146,7 @@ function Portfolio({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   return (
     <section className="portfolio" id="portfolio">
       <div className="section-heading">
-        <p className="kicker">Portfolio</p>
+        <p className="kicker">Portfólio</p>
         <h2>Trabalhos em vídeo</h2>
       </div>
 
@@ -194,7 +194,7 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
         </p>
       </div>
 
-      <form className="hire__form" aria-label="Formulario para contratar">
+      <form className="hire__form" aria-label="Formulário para contratar">
         <div className="form-row">
           <label className="field">
             <span>Nome</span>

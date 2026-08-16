@@ -11,10 +11,45 @@ gsap.registerPlugin(ScrollTrigger);
 
 export type CursorMode = "default" | "play" | "link";
 
+const autoplayRegistry = new Set<HTMLVideoElement>();
+let unlockListenerAttached = false;
+
+function resumeRegisteredVideos() {
+  autoplayRegistry.forEach((video) => {
+    if (video.paused) {
+      video.muted = true;
+      video.play().catch(() => {});
+    }
+  });
+}
+
+// Some mobile browsers (notably iOS Safari in Low Power Mode) silently refuse the very
+// first autoplay attempt and only allow playback after a genuine user gesture on the
+// page. This retries every registered video on the first touch/scroll/key press so
+// playback starts as soon as possible without needing the user to tap the video itself.
+function ensureUnlockListener() {
+  if (unlockListenerAttached || typeof window === "undefined") return;
+  unlockListenerAttached = true;
+
+  const events: (keyof WindowEventMap)[] = ["touchstart", "pointerdown", "scroll", "keydown"];
+  const handler = () => {
+    resumeRegisteredVideos();
+    events.forEach((event) => window.removeEventListener(event, handler));
+  };
+
+  events.forEach((event) => window.addEventListener(event, handler, { passive: true }));
+}
+
 export function autoplayVideoRef(video: HTMLVideoElement | null) {
   if (!video) return;
   video.muted = true;
-  video.play().catch(() => {});
+  autoplayRegistry.add(video);
+  ensureUnlockListener();
+
+  const tryPlay = () => video.play().catch(() => {});
+  tryPlay();
+  video.addEventListener("loadedmetadata", tryPlay, { once: true });
+  video.addEventListener("canplay", tryPlay, { once: true });
 }
 
 export function useCinematicScroll() {

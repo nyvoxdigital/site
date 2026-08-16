@@ -18,6 +18,8 @@
 .contact h2,
 .work-card h3 {
   font-family: var(--font-display), var(--font-display-fallback);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 * {

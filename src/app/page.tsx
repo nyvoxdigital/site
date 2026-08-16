@@ -77,11 +77,9 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
       <div className="hire__copy">
         <p className="kicker">Briefing inicial</p>
         <h2>
-          Vamos desenhar
+          Sua campanha
           <br />
-          sua próxima
-          <br />
-          campanha.
+          começa aqui.
         </h2>
         <p>
           Me conte o básico do projeto e eu retorno com o melhor formato para gravação, edição e entrega.

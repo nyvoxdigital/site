@@ -11,6 +11,12 @@ gsap.registerPlugin(ScrollTrigger);
 
 export type CursorMode = "default" | "play" | "link";
 
+export function autoplayVideoRef(video: HTMLVideoElement | null) {
+  if (!video) return;
+  video.muted = true;
+  video.play().catch(() => {});
+}
+
 export function useCinematicScroll() {
   useEffect(() => {
     const lenis = new Lenis({

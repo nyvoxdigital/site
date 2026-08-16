@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FiArrowRight } from "react-icons/fi";
 import { projects } from "@/lib/works";
-import { Contact, Cursor, CursorMode, SiteHeader, useCinematicScroll } from "@/components/SiteChrome";
+import { autoplayVideoRef, Contact, Cursor, CursorMode, SiteHeader, useCinematicScroll } from "@/components/SiteChrome";
 
 function Hero() {
   return (
@@ -13,6 +13,7 @@ function Hero() {
       <video
         className="hero__video"
         src="/videos/lagoinha-praia-grande-hero-web.mp4"
+        ref={autoplayVideoRef}
         autoPlay
         muted
         loop
@@ -49,16 +50,18 @@ function Portfolio({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
             href={`/projetos/${project.slug}`}
             className="work-card"
             key={project.slug}
-            onMouseEnter={(event) => {
-              setCursor("play");
-              event.currentTarget.querySelector("video")?.play();
-            }}
-            onMouseLeave={(event) => {
-              setCursor("default");
-              event.currentTarget.querySelector("video")?.play();
-            }}
+            onMouseEnter={() => setCursor("play")}
+            onMouseLeave={() => setCursor("default")}
           >
-            <video src={project.video} autoPlay muted loop playsInline preload="metadata" />
+            <video
+              src={project.video}
+              ref={autoplayVideoRef}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+            />
             <div className="work-card__meta">
               <span>{project.category}</span>
               <span>{project.year}</span>

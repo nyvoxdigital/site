@@ -42,6 +42,127 @@ export const projects: Project[] = [
       "Filme comercial para a Gillette em parceria com o Alecgol, construído em torno de uma narrativa simples e direta. Fotografia limpa e edição enxuta para reforçar a mensagem da marca sem distrair do protagonista.",
     photos: [],
     videos: ["/videos/alecgol-gillette-2-web.mp4"]
+  },
+  {
+    slug: "churrasco-com-buzeira",
+    title: "Churrasco com Buzeira",
+    category: "Realtime campaign",
+    year: "2026",
+    video: "/videos/churrasco-com-buzeira-web.mp4",
+    about:
+      "Cobertura em tempo real de um churrasco com conteúdo de bastidor, feita para acompanhar o ritmo do evento e ser publicada no mesmo dia.",
+    photos: [],
+    videos: ["/videos/churrasco-com-buzeira-web.mp4"]
+  },
+  {
+    slug: "day1-ihub",
+    title: "Day 1 iHub",
+    category: "Commercial film",
+    year: "2026",
+    video: "/videos/day1-ihub-web.mp4",
+    about:
+      "Registro do primeiro dia de um evento do iHub, com captação dinâmica para transmitir a energia do espaço e das pessoas presentes.",
+    photos: [],
+    videos: ["/videos/day1-ihub-web.mp4"]
+  },
+  {
+    slug: "excess-moby",
+    title: "Excess Moby",
+    category: "Realtime campaign",
+    year: "2026",
+    video: "/videos/excess-moby-web.mp4",
+    about:
+      "Conteúdo em tempo real gravado à beira-mar, acompanhando a ação das ondas com um olhar solto e imediato.",
+    photos: [],
+    videos: ["/videos/excess-moby-web.mp4"]
+  },
+  {
+    slug: "fashion-film",
+    title: "Fashion Film",
+    category: "Fashion film",
+    year: "2026",
+    video: "/videos/fashion-film-web.mp4",
+    about:
+      "Filme de moda com direção de fotografia cuidadosa, priorizando movimento e textura para valorizar as peças.",
+    photos: [],
+    videos: ["/videos/fashion-film-web.mp4"]
+  },
+  {
+    slug: "formatura-arq-urb",
+    title: "Formatura ARQ & URB",
+    category: "Event film",
+    year: "2026",
+    video: "/videos/formatura-arq-urb-web.mp4",
+    about:
+      "Cobertura da formatura da turma de Arquitetura e Urbanismo, registrando os principais momentos da cerimônia para a MR Formaturas.",
+    photos: [],
+    videos: ["/videos/formatura-arq-urb-web.mp4"]
+  },
+  {
+    slug: "goma-bbq",
+    title: "Goma BBQ",
+    category: "Realtime campaign",
+    year: "2026",
+    video: "/videos/goma-bbq-web.mp4",
+    about:
+      "Conteúdo em tempo real do dia a dia da Goma BBQ, com foco no preparo e no ambiente do estabelecimento.",
+    photos: [],
+    videos: ["/videos/goma-bbq-web.mp4"]
+  },
+  {
+    slug: "mobydicksantos-wave",
+    title: "Moby Dick Santos",
+    category: "Realtime campaign",
+    year: "2026",
+    video: "/videos/mobydicksantos-wave-web.mp4",
+    about:
+      "Registro em tempo real de um dia de ondas em Santos, acompanhando o movimento da água e dos surfistas.",
+    photos: [],
+    videos: ["/videos/mobydicksantos-wave-web.mp4"]
+  },
+  {
+    slug: "pre-wedding-casamento",
+    title: "Pré Wedding",
+    category: "Wedding film",
+    year: "2026",
+    video: "/videos/pre-wedding-casamento-web.mp4",
+    about:
+      "Ensaio pré-wedding gravado em alta taxa de quadros para valorizar os detalhes e a emoção do casal antes do grande dia.",
+    photos: [],
+    videos: ["/videos/pre-wedding-casamento-web.mp4"]
+  },
+  {
+    slug: "realtime-feminino-amador-mugo-games",
+    title: "Feminino Amador Mugo Games",
+    category: "Realtime campaign",
+    year: "2026",
+    video: "/videos/realtime-feminino-amador-mugo-games-web.mp4",
+    about:
+      "Cobertura em tempo real da categoria feminino amador do Mugo Games, com entrega rápida para acompanhar o calendário da competição.",
+    photos: [],
+    videos: ["/videos/realtime-feminino-amador-mugo-games-web.mp4"]
+  },
+  {
+    slug: "starterpack",
+    title: "Starterpack",
+    category: "Realtime campaign",
+    year: "2026",
+    video: "/videos/starterpack-web.mp4",
+    about:
+      "Conteúdo em formato starterpack, feito para redes sociais em parceria com @murilofilmsbr.",
+    photos: [],
+    videos: ["/videos/starterpack-web.mp4"]
+  },
+  {
+    slug: "veigh",
+    title: "Veigh",
+    category: "Music video",
+    year: "2026",
+    video: "/videos/veigh-web.mp4",
+    about:
+      "Peça audiovisual em parceria com @murilofilmsbr, com direção de fotografia autoral e edição dinâmica.",
+    photos: [],
+    videos: ["/videos/veigh-web.mp4"]
   }
 ];
 

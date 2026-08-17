@@ -4,8 +4,16 @@ import gsap from "gsap";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FiArrowRight } from "react-icons/fi";
-import { projects } from "@/lib/works";
-import { autoplayVideoRef, Contact, Cursor, CursorMode, SiteHeader, useCinematicScroll } from "@/components/SiteChrome";
+import { posterFor, projects } from "@/lib/works";
+import {
+  autoplayVideoRef,
+  Contact,
+  Cursor,
+  CursorMode,
+  lazyAutoplayVideoRef,
+  SiteHeader,
+  useCinematicScroll
+} from "@/components/SiteChrome";
 
 function Hero() {
   return (
@@ -13,6 +21,7 @@ function Hero() {
       <video
         className="hero__video"
         src="/videos/lagoinha-praia-grande-hero-web.mp4"
+        poster={posterFor("/videos/lagoinha-praia-grande-hero-web.mp4")}
         ref={autoplayVideoRef}
         autoPlay
         muted
@@ -55,12 +64,12 @@ function Portfolio({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
           >
             <video
               src={project.video}
-              ref={autoplayVideoRef}
-              autoPlay
+              poster={posterFor(project.video)}
+              ref={lazyAutoplayVideoRef}
               muted
               loop
               playsInline
-              preload="auto"
+              preload="none"
             />
             <div className="work-card__meta">
               <span>{project.category}</span>

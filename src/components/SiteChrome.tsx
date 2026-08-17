@@ -11,11 +11,14 @@ gsap.registerPlugin(ScrollTrigger);
 
 export type CursorMode = "default" | "play" | "link";
 
-const autoplayRegistry = new Set<HTMLVideoElement>();
+// Videos that should be playing right now (either always-visible hero videos, or lazy
+// cards currently scrolled into view). Only these get retried on the first user gesture —
+// videos that are off-screen and intentionally paused must stay paused.
+const videosThatShouldPlay = new Set<HTMLVideoElement>();
 let unlockListenerAttached = false;
 
-function resumeRegisteredVideos() {
-  autoplayRegistry.forEach((video) => {
+function resumeVideosThatShouldPlay() {
+  videosThatShouldPlay.forEach((video) => {
     if (video.paused) {
       video.muted = true;
       video.play().catch(() => {});
@@ -25,15 +28,15 @@ function resumeRegisteredVideos() {
 
 // Some mobile browsers (notably iOS Safari in Low Power Mode) silently refuse the very
 // first autoplay attempt and only allow playback after a genuine user gesture on the
-// page. This retries every registered video on the first touch/scroll/key press so
-// playback starts as soon as possible without needing the user to tap the video itself.
+// page. This retries every currently-visible video on the first touch/scroll/key press
+// so playback starts as soon as possible without needing the user to tap the video itself.
 function ensureUnlockListener() {
   if (unlockListenerAttached || typeof window === "undefined") return;
   unlockListenerAttached = true;
 
   const events: (keyof WindowEventMap)[] = ["touchstart", "pointerdown", "scroll", "keydown"];
   const handler = () => {
-    resumeRegisteredVideos();
+    resumeVideosThatShouldPlay();
     events.forEach((event) => window.removeEventListener(event, handler));
   };
 
@@ -43,13 +46,49 @@ function ensureUnlockListener() {
 export function autoplayVideoRef(video: HTMLVideoElement | null) {
   if (!video) return;
   video.muted = true;
-  autoplayRegistry.add(video);
+  videosThatShouldPlay.add(video);
   ensureUnlockListener();
 
   const tryPlay = () => video.play().catch(() => {});
   tryPlay();
   video.addEventListener("loadedmetadata", tryPlay, { once: true });
   video.addEventListener("canplay", tryPlay, { once: true });
+}
+
+let lazyObserver: IntersectionObserver | null = null;
+
+function getLazyObserver() {
+  if (lazyObserver || typeof window === "undefined" || typeof IntersectionObserver === "undefined") {
+    return lazyObserver;
+  }
+  lazyObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const video = entry.target as HTMLVideoElement;
+        if (entry.isIntersecting) {
+          videosThatShouldPlay.add(video);
+          video.muted = true;
+          video.play().catch(() => {});
+        } else {
+          videosThatShouldPlay.delete(video);
+          video.pause();
+        }
+      });
+    },
+    { rootMargin: "200px 0px" }
+  );
+  return lazyObserver;
+}
+
+// For videos further down the page (portfolio cards, project video sections): don't fetch
+// or play anything until the card is about to scroll into view, and pause again once it
+// scrolls back out. Cuts the amount of video data downloaded on page load from "every
+// video on the page" down to just what's actually visible.
+export function lazyAutoplayVideoRef(video: HTMLVideoElement | null) {
+  if (!video) return;
+  video.muted = true;
+  ensureUnlockListener();
+  getLazyObserver()?.observe(video);
 }
 
 export function useCinematicScroll() {

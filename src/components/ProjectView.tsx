@@ -2,8 +2,16 @@
 
 import gsap from "gsap";
 import { useEffect, useState } from "react";
-import type { Project } from "@/lib/works";
-import { autoplayVideoRef, Contact, Cursor, CursorMode, SiteHeader, useCinematicScroll } from "@/components/SiteChrome";
+import { posterFor, type Project } from "@/lib/works";
+import {
+  autoplayVideoRef,
+  Contact,
+  Cursor,
+  CursorMode,
+  lazyAutoplayVideoRef,
+  SiteHeader,
+  useCinematicScroll
+} from "@/components/SiteChrome";
 
 function ProjectHero({ project }: { project: Project }) {
   return (
@@ -11,6 +19,7 @@ function ProjectHero({ project }: { project: Project }) {
       <video
         className="project-hero__video"
         src={project.video}
+        poster={posterFor(project.video)}
         ref={autoplayVideoRef}
         autoPlay
         muted
@@ -88,7 +97,15 @@ function ProjectVideos({ project, setCursor }: { project: Project; setCursor: (m
             onMouseEnter={() => setCursor("play")}
             onMouseLeave={() => setCursor("default")}
           >
-            <video src={video} ref={autoplayVideoRef} autoPlay muted loop playsInline preload="auto" />
+            <video
+              src={video}
+              poster={posterFor(video)}
+              ref={lazyAutoplayVideoRef}
+              muted
+              loop
+              playsInline
+              preload="none"
+            />
             <span className="video-tile__index">{String(index + 1).padStart(2, "0")}</span>
           </div>
         ))}

@@ -9,6 +9,10 @@ export type Project = {
   videos: string[];
 };
 
+export function posterFor(video: string) {
+  return video.replace(/-web\.mp4$/, "-poster.jpg");
+}
+
 export const projects: Project[] = [
   {
     slug: "lagoinha-praia-grande",

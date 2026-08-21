@@ -173,3 +173,28 @@ export const projects: Project[] = [
 export function getProjectBySlug(slug: string) {
   return projects.find((project) => project.slug === slug);
 }
+
+const R2_BASE_URL = "https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev";
+
+// Placeholder while real per-project footage gets uploaded to R2 one by
+// one — every project video currently points at this same clip. The home
+// page's hero video is hardcoded separately in page.tsx and never goes
+// through this map, so it's unaffected.
+const PLACEHOLDER_VIDEO = "Alecgol - Gillette 2.mp4";
+
+const r2Overrides: Record<string, string> = Object.fromEntries(
+  projects.flatMap((project) => [project.video, ...project.videos]).map((path) => [path, PLACEHOLDER_VIDEO])
+);
+
+export function videoSrc(video: string) {
+  const filename = r2Overrides[video];
+  return filename ? `${R2_BASE_URL}/${encodeURIComponent(filename)}` : video;
+}
+
+// While a video is on the placeholder, its thumbnail should be the
+// placeholder's thumbnail too — not the real project's old poster image.
+const PLACEHOLDER_POSTER = "/videos/alecgol-gillette-2-poster.jpg";
+
+export function posterSrc(video: string) {
+  return r2Overrides[video] ? PLACEHOLDER_POSTER : posterFor(video);
+}

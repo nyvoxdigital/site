@@ -1,18 +1,21 @@
 "use client";
 
 import gsap from "gsap";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FiArrowRight } from "react-icons/fi";
 import { posterFor, projects } from "@/lib/works";
 import {
   autoplayVideoRef,
+  Clients,
   Contact,
   Cursor,
   CursorMode,
-  lazyAutoplayVideoRef,
+  Filmstrip,
+  Magnetic,
   SiteHeader,
-  useCinematicScroll
+  SplitText,
+  useCinematicScroll,
+  useTextReveal
 } from "@/components/SiteChrome";
 
 function Hero() {
@@ -20,7 +23,7 @@ function Hero() {
     <section className="hero" id="topo">
       <video
         className="hero__video"
-        src="/videos/lagoinha-praia-grande-hero-web.mp4"
+        src="https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/lagoinha-praia-grande-hero-web.mp4"
         poster={posterFor("/videos/lagoinha-praia-grande-hero-web.mp4")}
         ref={autoplayVideoRef}
         autoPlay
@@ -32,12 +35,12 @@ function Hero() {
       <div className="grain" />
       <div className="hero__copy">
         <p className="kicker">Filmes / campanhas / conteúdo</p>
-        <h1>
-          VÍDEO
+        <h1 className="reveal">
+          <SplitText>VÍDEO</SplitText>
           <br />
-          QUE FAZ
+          <SplitText>QUE FAZ</SplitText>
           <br />
-          MARCA
+          <SplitText>MARCA</SplitText>
         </h1>
       </div>
       <span className="scroll-cue">Role</span>
@@ -50,35 +53,11 @@ function Portfolio({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
     <section className="portfolio" id="portfolio">
       <div className="section-heading">
         <p className="kicker">Portfólio</p>
-        <h2>Trabalhos em vídeo</h2>
+        <h2 className="reveal">
+          <SplitText>Trabalhos em vídeo</SplitText>
+        </h2>
       </div>
-
-      <div className="work-grid">
-        {projects.map((project) => (
-          <Link
-            href={`/projetos/${project.slug}`}
-            className="work-card"
-            key={project.slug}
-            onMouseEnter={() => setCursor("play")}
-            onMouseLeave={() => setCursor("default")}
-          >
-            <video
-              src={project.video}
-              poster={posterFor(project.video)}
-              ref={lazyAutoplayVideoRef}
-              muted
-              loop
-              playsInline
-              preload="none"
-            />
-            <div className="work-card__meta">
-              <span>{project.category}</span>
-              <span>{project.year}</span>
-            </div>
-            <h3>{project.title}</h3>
-          </Link>
-        ))}
-      </div>
+      <Filmstrip projects={projects} setCursor={setCursor} />
     </section>
   );
 }
@@ -88,10 +67,10 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
     <section className="hire" id="contrate">
       <div className="hire__copy">
         <p className="kicker">Briefing inicial</p>
-        <h2>
-          Sua campanha
+        <h2 className="reveal">
+          <SplitText>Sua campanha</SplitText>
           <br />
-          começa aqui.
+          <SplitText>começa aqui.</SplitText>
         </h2>
         <p>
           Me conte o básico do projeto e eu retorno com o melhor formato para gravação, edição e entrega.
@@ -144,15 +123,17 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
           <textarea name="mensagem" placeholder="Marca, ideia, cidade, referência ou objetivo da campanha." />
         </label>
 
-        <button
-          className="hire__submit"
-          type="submit"
-          onMouseEnter={() => setCursor("link")}
-          onMouseLeave={() => setCursor("default")}
-        >
-          Enviar briefing
-          <FiArrowRight />
-        </button>
+        <Magnetic>
+          <button
+            className="hire__submit"
+            type="submit"
+            onMouseEnter={() => setCursor("link")}
+            onMouseLeave={() => setCursor("default")}
+          >
+            Enviar briefing
+            <FiArrowRight />
+          </button>
+        </Magnetic>
       </form>
     </section>
   );
@@ -160,13 +141,15 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
 
 export default function Home() {
   const [cursor, setCursor] = useState<CursorMode>("default");
+  const [preview, setPreview] = useState<string | null>(null);
 
   useCinematicScroll();
+  useTextReveal();
 
   useEffect(() => {
     const context = gsap.context(() => {
       gsap.fromTo(
-        ".work-card, .hire__copy, .hire__form, .contact",
+        ".filmstrip, .hire__copy, .hire__form, .contact",
         { opacity: 0, y: 36 },
         {
           opacity: 1,
@@ -187,9 +170,10 @@ export default function Home() {
 
   return (
     <main>
-      <Cursor mode={cursor} />
-      <SiteHeader setCursor={setCursor} />
+      <Cursor mode={cursor} previewSrc={preview} />
+      <SiteHeader setCursor={setCursor} setPreview={setPreview} />
       <Hero />
+      <Clients />
       <Portfolio setCursor={setCursor} />
       <Hire setCursor={setCursor} />
       <Contact setCursor={setCursor} />

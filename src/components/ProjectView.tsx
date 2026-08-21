@@ -2,7 +2,7 @@
 
 import gsap from "gsap";
 import { useEffect, useState } from "react";
-import { posterFor, type Project } from "@/lib/works";
+import { posterSrc, videoSrc, type Project } from "@/lib/works";
 import {
   autoplayVideoRef,
   Contact,
@@ -10,7 +10,9 @@ import {
   CursorMode,
   lazyAutoplayVideoRef,
   SiteHeader,
-  useCinematicScroll
+  SplitText,
+  useCinematicScroll,
+  useTextReveal
 } from "@/components/SiteChrome";
 
 function ProjectHero({ project }: { project: Project }) {
@@ -18,8 +20,8 @@ function ProjectHero({ project }: { project: Project }) {
     <section className="project-hero">
       <video
         className="project-hero__video"
-        src={project.video}
-        poster={posterFor(project.video)}
+        src={videoSrc(project.video)}
+        poster={posterSrc(project.video)}
         ref={autoplayVideoRef}
         autoPlay
         muted
@@ -32,7 +34,9 @@ function ProjectHero({ project }: { project: Project }) {
         <p className="kicker">
           {project.category} · {project.year}
         </p>
-        <h1>{project.title}</h1>
+        <h1 className="reveal">
+          <SplitText>{project.title}</SplitText>
+        </h1>
       </div>
       <span className="scroll-cue">Role</span>
     </section>
@@ -44,7 +48,9 @@ function ProjectAbout({ project }: { project: Project }) {
     <section className="project-about">
       <div className="section-heading">
         <p className="kicker">Sobre</p>
-        <h2>O projeto</h2>
+        <h2 className="reveal">
+          <SplitText>O projeto</SplitText>
+        </h2>
       </div>
       <p className="project-about__text">{project.about}</p>
     </section>
@@ -58,7 +64,9 @@ function ProjectPhotos({ project, setCursor }: { project: Project; setCursor: (m
     <section className="project-photos">
       <div className="section-heading">
         <p className="kicker">Fotos</p>
-        <h2>Registros do projeto</h2>
+        <h2 className="reveal">
+          <SplitText>Registros do projeto</SplitText>
+        </h2>
       </div>
       <div className="photo-grid">
         {placeholders.map((photo, index) =>
@@ -87,7 +95,9 @@ function ProjectVideos({ project, setCursor }: { project: Project; setCursor: (m
     <section className="project-videos">
       <div className="section-heading">
         <p className="kicker">Vídeos</p>
-        <h2>Material em movimento</h2>
+        <h2 className="reveal">
+          <SplitText>Material em movimento</SplitText>
+        </h2>
       </div>
       <div className="video-grid">
         {project.videos.map((video, index) => (
@@ -98,8 +108,8 @@ function ProjectVideos({ project, setCursor }: { project: Project; setCursor: (m
             onMouseLeave={() => setCursor("default")}
           >
             <video
-              src={video}
-              poster={posterFor(video)}
+              src={videoSrc(video)}
+              poster={posterSrc(video)}
               ref={lazyAutoplayVideoRef}
               muted
               loop
@@ -118,6 +128,7 @@ export default function ProjectView({ project }: { project: Project }) {
   const [cursor, setCursor] = useState<CursorMode>("default");
 
   useCinematicScroll();
+  useTextReveal();
 
   useEffect(() => {
     const context = gsap.context(() => {

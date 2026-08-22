@@ -12,18 +12,25 @@ import {
   CursorMode,
   Filmstrip,
   Magnetic,
+  Scramble,
+  ShowreelModal,
   SiteHeader,
   SplitText,
   useCinematicScroll,
   useTextReveal
 } from "@/components/SiteChrome";
+import { FiPlay } from "react-icons/fi";
 
-function Hero() {
+const HERO_VIDEO = "https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/lagoinha-praia-grande-hero-web.mp4";
+
+function Hero({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
+  const [showreelOpen, setShowreelOpen] = useState(false);
+
   return (
     <section className="hero" id="topo">
       <video
         className="hero__video"
-        src="https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/lagoinha-praia-grande-hero-web.mp4"
+        src={HERO_VIDEO}
         poster={posterFor("/videos/lagoinha-praia-grande-hero-web.mp4")}
         ref={autoplayVideoRef}
         autoPlay
@@ -42,8 +49,26 @@ function Hero() {
           <br />
           <SplitText>MARCA</SplitText>
         </h1>
+        <Magnetic>
+          <button
+            className="hero__showreel"
+            type="button"
+            onClick={() => setShowreelOpen(true)}
+            onMouseEnter={() => setCursor("link")}
+            onMouseLeave={() => setCursor("default")}
+          >
+            <FiPlay />
+            <Scramble>Assistir showreel</Scramble>
+          </button>
+        </Magnetic>
       </div>
       <span className="scroll-cue">Role</span>
+      <ShowreelModal
+        video={HERO_VIDEO}
+        poster={posterFor("/videos/lagoinha-praia-grande-hero-web.mp4")}
+        open={showreelOpen}
+        onClose={() => setShowreelOpen(false)}
+      />
     </section>
   );
 }
@@ -130,7 +155,7 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
             onMouseEnter={() => setCursor("link")}
             onMouseLeave={() => setCursor("default")}
           >
-            Enviar briefing
+            <Scramble>Enviar briefing</Scramble>
             <FiArrowRight />
           </button>
         </Magnetic>
@@ -172,7 +197,7 @@ export default function Home() {
     <main>
       <Cursor mode={cursor} previewSrc={preview} />
       <SiteHeader setCursor={setCursor} setPreview={setPreview} />
-      <Hero />
+      <Hero setCursor={setCursor} />
       <Clients />
       <Portfolio setCursor={setCursor} />
       <Hire setCursor={setCursor} />

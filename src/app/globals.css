@@ -229,6 +229,84 @@ main {
   text-transform: uppercase;
 }
 
+.hero__showreel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.6rem;
+  padding: 0.7rem 1.3rem;
+  background: transparent;
+  border: 1px solid rgba(247, 242, 232, 0.4);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 240ms ease, background 240ms ease;
+}
+
+.hero__showreel:hover {
+  border-color: rgba(247, 242, 232, 0.85);
+  background: rgba(247, 242, 232, 0.08);
+}
+
+.showreel-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 5, 5, 0.94);
+  padding: 2rem;
+}
+
+.showreel-modal__video {
+  width: 100%;
+  max-width: 72rem;
+  max-height: 82vh;
+  border-radius: 6px;
+}
+
+.showreel-modal__close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  background: transparent;
+  border: 1px solid rgba(247, 242, 232, 0.4);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.page-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: #050505;
+  transform: scaleY(0);
+  transform-origin: top;
+  pointer-events: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .scroll-cue {
   position: absolute;
   right: clamp(1rem, 4vw, 4rem);

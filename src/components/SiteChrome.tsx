@@ -4,17 +4,19 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   cloneElement,
   isValidElement,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactElement,
   type ReactNode,
   type Ref
 } from "react";
-import { FiArrowUpRight, FiMail } from "react-icons/fi";
+import { FiArrowUpRight, FiMail, FiPlay, FiX } from "react-icons/fi";
 import { posterSrc, videoSrc, type Project } from "@/lib/works";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -207,6 +209,142 @@ export function Magnetic({ children, strength = 0.35 }: { children: ReactElement
   return cloneElement(children as ReactElement<{ ref?: Ref<HTMLElement> }>, { ref });
 }
 
+const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+// On hover, briefly cycles each character through random glyphs before
+// settling left-to-right into the real text. The scrambling copy is
+// aria-hidden; a plain (visually hidden) span keeps the accessible name
+// stable so screen readers never hear the garbled mid-animation text.
+export function Scramble({ children }: { children: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const frame = useRef(0);
+  const raf = useRef<number>(0);
+  const text = children;
+
+  const start = () => {
+    cancelAnimationFrame(raf.current);
+    frame.current = 0;
+    const totalFrames = text.length * 3;
+
+    const tick = () => {
+      const el = ref.current;
+      if (!el) return;
+      const progress = frame.current / totalFrames;
+      let output = "";
+
+      for (let i = 0; i < text.length; i++) {
+        if (text[i] === " ") {
+          output += " ";
+        } else if (progress > i / text.length + 0.3) {
+          output += text[i];
+        } else {
+          output += SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        }
+      }
+
+      el.textContent = output;
+      frame.current += 1;
+
+      if (progress < 1.3) {
+        raf.current = requestAnimationFrame(tick);
+      } else {
+        el.textContent = text;
+      }
+    };
+
+    raf.current = requestAnimationFrame(tick);
+  };
+
+  const reset = () => {
+    cancelAnimationFrame(raf.current);
+    if (ref.current) ref.current.textContent = text;
+  };
+
+  useEffect(() => () => cancelAnimationFrame(raf.current), []);
+
+  return (
+    <>
+      <span aria-hidden="true" ref={ref} onPointerEnter={start} onPointerLeave={reset}>
+        {text}
+      </span>
+      <span className="sr-only">{text}</span>
+    </>
+  );
+}
+
+// Fullscreen video lightbox, opened from a trigger button. Reuses whatever
+// video src/poster it's given (the hero clip, by default) instead of
+// requiring a separate edited showreel file.
+export function ShowreelModal({
+  video,
+  poster,
+  open,
+  onClose
+}: {
+  video: string;
+  poster?: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="showreel-modal" onClick={onClose}>
+      <button className="showreel-modal__close" onClick={onClose} aria-label="Fechar showreel">
+        <FiX />
+      </button>
+      <video
+        className="showreel-modal__video"
+        src={video}
+        poster={poster}
+        controls
+        autoPlay
+        playsInline
+        onClick={(event) => event.stopPropagation()}
+      />
+    </div>
+  );
+}
+
+// Persistent black overlay that lives in the root layout (never unmounts
+// between route changes) and wipes away on every pathname change, giving
+// project/home navigation a cut transition instead of an instant swap.
+export function PageTransition() {
+  const pathname = usePathname();
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const firstRender = useRef(true);
+
+  useLayoutEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+
+    const el = overlayRef.current;
+    if (!el) return;
+
+    gsap.set(el, { scaleY: 1 });
+    gsap.to(el, { scaleY: 0, duration: 0.6, ease: "power3.inOut" });
+  }, [pathname]);
+
+  return <div ref={overlayRef} className="page-transition" aria-hidden="true" />;
+}
+
 // Splits a line of text into words, each masked inside an overflow-hidden
 // span so useTextReveal can slide it up into view. Call once per visual
 // line (existing <br /> line breaks in headings stay put around it).
@@ -282,7 +420,7 @@ export function SiteHeader({ setCursor, setPreview }: { setCursor: (mode: Cursor
           onMouseEnter={() => setCursor("link")}
           onMouseLeave={() => setCursor("default")}
         >
-          Studio Motion
+          <Scramble>Studio Motion</Scramble>
         </Link>
       </Magnetic>
       <nav aria-label="Navegacao principal">
@@ -298,12 +436,12 @@ export function SiteHeader({ setCursor, setPreview }: { setCursor: (mode: Cursor
               setPreview?.(null);
             }}
           >
-            Trabalhos
+            <Scramble>Trabalhos</Scramble>
           </Link>
         </Magnetic>
         <Magnetic>
           <Link href="/#contrate" onMouseEnter={() => setCursor("link")} onMouseLeave={() => setCursor("default")}>
-            Orçamento
+            <Scramble>Orçamento</Scramble>
           </Link>
         </Magnetic>
       </nav>
@@ -456,7 +594,7 @@ export function Contact({ setCursor }: { setCursor: (mode: CursorMode) => void }
               onMouseEnter={() => setCursor("link")}
               onMouseLeave={() => setCursor("default")}
             >
-              {item}
+              <Scramble>{item}</Scramble>
               {item.includes("@") ? <FiMail /> : <FiArrowUpRight />}
             </a>
           </Magnetic>

@@ -13,24 +13,18 @@ import {
   Filmstrip,
   Magnetic,
   Scramble,
-  ShowreelModal,
   SiteHeader,
   SplitText,
   useCinematicScroll,
   useTextReveal
 } from "@/components/SiteChrome";
-import { FiPlay } from "react-icons/fi";
 
-const HERO_VIDEO = "https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/lagoinha-praia-grande-hero-web.mp4";
-
-function Hero({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
-  const [showreelOpen, setShowreelOpen] = useState(false);
-
+function Hero() {
   return (
     <section className="hero" id="topo">
       <video
         className="hero__video"
-        src={HERO_VIDEO}
+        src="https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/lagoinha-praia-grande-hero-web.mp4"
         poster={posterFor("/videos/lagoinha-praia-grande-hero-web.mp4")}
         ref={autoplayVideoRef}
         autoPlay
@@ -49,26 +43,8 @@ function Hero({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
           <br />
           <SplitText>MARCA</SplitText>
         </h1>
-        <Magnetic>
-          <button
-            className="hero__showreel"
-            type="button"
-            onClick={() => setShowreelOpen(true)}
-            onMouseEnter={() => setCursor("link")}
-            onMouseLeave={() => setCursor("default")}
-          >
-            <FiPlay />
-            <Scramble>Assistir showreel</Scramble>
-          </button>
-        </Magnetic>
       </div>
       <span className="scroll-cue">Role</span>
-      <ShowreelModal
-        video={HERO_VIDEO}
-        poster={posterFor("/videos/lagoinha-praia-grande-hero-web.mp4")}
-        open={showreelOpen}
-        onClose={() => setShowreelOpen(false)}
-      />
     </section>
   );
 }
@@ -197,7 +173,7 @@ export default function Home() {
     <main>
       <Cursor mode={cursor} previewSrc={preview} />
       <SiteHeader setCursor={setCursor} setPreview={setPreview} />
-      <Hero setCursor={setCursor} />
+      <Hero />
       <Clients />
       <Portfolio setCursor={setCursor} />
       <Hire setCursor={setCursor} />

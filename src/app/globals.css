@@ -128,6 +128,53 @@ main {
   opacity: 1;
 }
 
+.cursor-trail {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+}
+
+.cursor-trail__wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.cursor-trail__dot {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0;
+}
+
+.cursor-trail__dot--active {
+  animation: cursor-trail-fade 650ms ease-out forwards;
+}
+
+@keyframes cursor-trail-fade {
+  from {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-trail {
+    display: none;
+  }
+}
+
 .cursor--preview {
   width: 148px;
   height: 104px;
@@ -227,62 +274,6 @@ main {
   line-height: 0.92;
   letter-spacing: 0;
   text-transform: uppercase;
-}
-
-.hero__showreel {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-top: 1.6rem;
-  padding: 0.7rem 1.3rem;
-  background: transparent;
-  border: 1px solid rgba(247, 242, 232, 0.4);
-  border-radius: 999px;
-  color: var(--ink);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: border-color 240ms ease, background 240ms ease;
-}
-
-.hero__showreel:hover {
-  border-color: rgba(247, 242, 232, 0.85);
-  background: rgba(247, 242, 232, 0.08);
-}
-
-.showreel-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 3000;
-  display: grid;
-  place-items: center;
-  background: rgba(5, 5, 5, 0.94);
-  padding: 2rem;
-}
-
-.showreel-modal__video {
-  width: 100%;
-  max-width: 72rem;
-  max-height: 82vh;
-  border-radius: 6px;
-}
-
-.showreel-modal__close {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  display: grid;
-  place-items: center;
-  width: 2.6rem;
-  height: 2.6rem;
-  background: transparent;
-  border: 1px solid rgba(247, 242, 232, 0.4);
-  border-radius: 999px;
-  color: var(--ink);
-  font-size: 1.1rem;
-  cursor: pointer;
 }
 
 .page-transition {

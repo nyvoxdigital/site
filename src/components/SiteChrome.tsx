@@ -16,7 +16,7 @@ import {
   type ReactNode,
   type Ref
 } from "react";
-import { FiArrowUpRight, FiMail, FiPlay, FiX } from "react-icons/fi";
+import { FiArrowUpRight, FiMail } from "react-icons/fi";
 import { posterSrc, videoSrc, type Project } from "@/lib/works";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -171,6 +171,60 @@ export function Cursor({ mode, previewSrc }: { mode: CursorMode; previewSrc?: st
   );
 }
 
+const TRAIL_LENGTH = 14;
+const TRAIL_SPAWN_INTERVAL_MS = 28;
+
+// A trail of small dots spawns along the pointer's path and fades out in
+// place behind it. Uses a fixed pool of DOM nodes recycled round-robin
+// (rather than creating/removing elements per move) so it stays cheap even
+// on a fast mouse sweep across the whole page.
+export function CursorTrail() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const nextIndex = useRef(0);
+  const lastSpawn = useRef(0);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const wrappers = Array.from(container.children) as HTMLElement[];
+
+    const spawn = (x: number, y: number) => {
+      const wrapper = wrappers[nextIndex.current];
+      nextIndex.current = (nextIndex.current + 1) % wrappers.length;
+      if (!wrapper) return;
+
+      wrapper.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+
+      const dot = wrapper.firstElementChild as HTMLElement | null;
+      if (!dot) return;
+      dot.classList.remove("cursor-trail__dot--active");
+      void dot.offsetWidth; // restart the CSS animation from scratch
+      dot.classList.add("cursor-trail__dot--active");
+    };
+
+    const onMove = (event: PointerEvent) => {
+      const now = performance.now();
+      if (now - lastSpawn.current < TRAIL_SPAWN_INTERVAL_MS) return;
+      lastSpawn.current = now;
+      spawn(event.clientX, event.clientY);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    return () => window.removeEventListener("pointermove", onMove);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="cursor-trail" aria-hidden="true">
+      {Array.from({ length: TRAIL_LENGTH }).map((_, i) => (
+        <span className="cursor-trail__wrapper" key={i}>
+          <span className="cursor-trail__dot" />
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // Wraps a single focusable element (link, button) and pulls it toward the
 // pointer while hovered, snapping back on leave — the classic "magnetic
 // button" hover effect, built with gsap.quickTo for a cheap, smooth tween.
@@ -269,55 +323,6 @@ export function Scramble({ children }: { children: string }) {
       </span>
       <span className="sr-only">{text}</span>
     </>
-  );
-}
-
-// Fullscreen video lightbox, opened from a trigger button. Reuses whatever
-// video src/poster it's given (the hero clip, by default) instead of
-// requiring a separate edited showreel file.
-export function ShowreelModal({
-  video,
-  poster,
-  open,
-  onClose
-}: {
-  video: string;
-  poster?: string;
-  open: boolean;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    if (!open) return;
-
-    document.body.style.overflow = "hidden";
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  return (
-    <div className="showreel-modal" onClick={onClose}>
-      <button className="showreel-modal__close" onClick={onClose} aria-label="Fechar showreel">
-        <FiX />
-      </button>
-      <video
-        className="showreel-modal__video"
-        src={video}
-        poster={poster}
-        controls
-        autoPlay
-        playsInline
-        onClick={(event) => event.stopPropagation()}
-      />
-    </div>
   );
 }
 

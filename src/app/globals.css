@@ -27,7 +27,6 @@
 html {
   background: var(--paper);
   color: var(--ink);
-  cursor: none;
   overflow-x: hidden;
   scroll-behavior: smooth;
 }
@@ -43,7 +42,7 @@ body {
 
 button,
 a {
-  cursor: none;
+  cursor: pointer;
 }
 
 main {
@@ -97,35 +96,15 @@ main {
   top: 0;
   left: 0;
   z-index: 1000;
-  width: 18px;
-  height: 18px;
+  width: 0;
+  height: 0;
   pointer-events: none;
-  border: 1px solid rgba(247, 242, 232, 0.8);
-  border-radius: 999px;
-  mix-blend-mode: difference;
-  transition: width 260ms ease, height 260ms ease, border-color 260ms ease;
 }
 
-.cursor span {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: white;
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  opacity: 0;
-}
-
-.cursor--play,
-.cursor--link {
-  width: 70px;
-  height: 70px;
-  border-color: rgba(247, 242, 232, 0.52);
-}
-
-.cursor--play span {
-  opacity: 1;
+.cursor--preview {
+  width: 148px;
+  height: 104px;
+  transform-origin: center;
 }
 
 .cursor-trail {
@@ -135,37 +114,28 @@ main {
   pointer-events: none;
 }
 
-.cursor-trail__wrapper {
+.cursor-trail__segment {
   position: fixed;
-  top: 0;
+  top: -1px;
   left: 0;
+  height: 2px;
   width: 0;
-  height: 0;
-}
-
-.cursor-trail__dot {
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  width: 8px;
-  height: 8px;
+  background: var(--ink);
   border-radius: 999px;
-  background: var(--accent);
+  transform-origin: 0 50%;
   opacity: 0;
 }
 
-.cursor-trail__dot--active {
-  animation: cursor-trail-fade 650ms ease-out forwards;
+.cursor-trail__segment--active {
+  animation: cursor-trail-fade 950ms ease-out forwards;
 }
 
 @keyframes cursor-trail-fade {
   from {
-    opacity: 0.85;
-    transform: scale(1);
+    opacity: 0.8;
   }
   to {
     opacity: 0;
-    transform: scale(0.2);
   }
 }
 
@@ -175,20 +145,14 @@ main {
   }
 }
 
-.cursor--preview {
+.cursor__preview {
+  position: absolute;
+  top: -74px;
+  left: -52px;
   width: 148px;
   height: 104px;
   border-radius: 10px;
-  border-color: transparent;
   overflow: hidden;
-  mix-blend-mode: normal;
-}
-
-.cursor__preview {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
   object-fit: cover;
 }
 
@@ -196,6 +160,8 @@ main {
   display: inline-block;
   overflow: hidden;
   vertical-align: top;
+  padding-top: 0.2em;
+  margin-top: -0.2em;
 }
 
 .split-text__word {

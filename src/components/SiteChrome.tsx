@@ -125,9 +125,12 @@ export function useCinematicScroll() {
   }, []);
 }
 
+// The native OS cursor stays visible everywhere — this only renders the
+// floating image thumbnail for "preview" mode (see the "Trabalhos" nav
+// link). Every other mode is invisible; setCursor("play"/"link") calls
+// elsewhere in the app are harmless no-ops as far as this component goes.
 export function Cursor({ mode, previewSrc }: { mode: CursorMode; previewSrc?: string | null }) {
   const dot = useRef<HTMLDivElement>(null);
-  const label = mode === "play" ? "PLAY" : "";
 
   useEffect(() => {
     const cursor = dot.current;
@@ -160,54 +163,70 @@ export function Cursor({ mode, previewSrc }: { mode: CursorMode; previewSrc?: st
     };
   }, []);
 
+  if (mode !== "preview" || !previewSrc) {
+    return <div ref={dot} className="cursor" aria-hidden="true" />;
+  }
+
   return (
-    <div ref={dot} className={`cursor cursor--${mode}`} aria-hidden="true">
-      {mode === "preview" && previewSrc ? (
-        <img className="cursor__preview" src={previewSrc} alt="" />
-      ) : (
-        <span>{label}</span>
-      )}
+    <div ref={dot} className="cursor cursor--preview" aria-hidden="true">
+      <img className="cursor__preview" src={previewSrc} alt="" />
     </div>
   );
 }
 
-const TRAIL_LENGTH = 14;
-const TRAIL_SPAWN_INTERVAL_MS = 28;
+const SCRIBBLE_LENGTH = 60;
+const SCRIBBLE_SPAWN_INTERVAL_MS = 22;
+const SCRIBBLE_JITTER = 5;
 
-// A trail of small dots spawns along the pointer's path and fades out in
-// place behind it. Uses a fixed pool of DOM nodes recycled round-robin
-// (rather than creating/removing elements per move) so it stays cheap even
-// on a fast mouse sweep across the whole page.
+// Draws a loose, hand-drawn-looking line that trails behind the pointer and
+// fades away — like the cursor is scribbling on the page — instead of
+// replacing the native cursor. Each segment connects the last sampled point
+// to the current one (with a little random jitter for the wobble), using a
+// fixed pool of recycled DOM nodes so a fast sweep across the page stays
+// cheap.
 export function CursorTrail() {
   const containerRef = useRef<HTMLDivElement>(null);
   const nextIndex = useRef(0);
   const lastSpawn = useRef(0);
+  const lastPoint = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const wrappers = Array.from(container.children) as HTMLElement[];
+    const segments = Array.from(container.children) as HTMLElement[];
 
-    const spawn = (x: number, y: number) => {
-      const wrapper = wrappers[nextIndex.current];
-      nextIndex.current = (nextIndex.current + 1) % wrappers.length;
-      if (!wrapper) return;
+    const spawn = (x1: number, y1: number, x2: number, y2: number) => {
+      const segment = segments[nextIndex.current];
+      nextIndex.current = (nextIndex.current + 1) % segments.length;
+      if (!segment) return;
 
-      wrapper.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const length = Math.hypot(dx, dy);
+      const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
 
-      const dot = wrapper.firstElementChild as HTMLElement | null;
-      if (!dot) return;
-      dot.classList.remove("cursor-trail__dot--active");
-      void dot.offsetWidth; // restart the CSS animation from scratch
-      dot.classList.add("cursor-trail__dot--active");
+      segment.style.width = `${length}px`;
+      segment.style.transform = `translate3d(${x1}px, ${y1}px, 0) rotate(${angle}deg)`;
+
+      segment.classList.remove("cursor-trail__segment--active");
+      void segment.offsetWidth; // restart the CSS animation from scratch
+      segment.classList.add("cursor-trail__segment--active");
     };
 
     const onMove = (event: PointerEvent) => {
       const now = performance.now();
-      if (now - lastSpawn.current < TRAIL_SPAWN_INTERVAL_MS) return;
+      if (now - lastSpawn.current < SCRIBBLE_SPAWN_INTERVAL_MS) return;
       lastSpawn.current = now;
-      spawn(event.clientX, event.clientY);
+
+      const jitterX = (Math.random() - 0.5) * SCRIBBLE_JITTER;
+      const jitterY = (Math.random() - 0.5) * SCRIBBLE_JITTER;
+      const point = { x: event.clientX + jitterX, y: event.clientY + jitterY };
+
+      if (lastPoint.current) {
+        spawn(lastPoint.current.x, lastPoint.current.y, point.x, point.y);
+      }
+      lastPoint.current = point;
     };
 
     window.addEventListener("pointermove", onMove);
@@ -216,10 +235,8 @@ export function CursorTrail() {
 
   return (
     <div ref={containerRef} className="cursor-trail" aria-hidden="true">
-      {Array.from({ length: TRAIL_LENGTH }).map((_, i) => (
-        <span className="cursor-trail__wrapper" key={i}>
-          <span className="cursor-trail__dot" />
-        </span>
+      {Array.from({ length: SCRIBBLE_LENGTH }).map((_, i) => (
+        <span className="cursor-trail__segment" key={i} />
       ))}
     </div>
   );

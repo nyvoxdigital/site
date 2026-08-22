@@ -57,39 +57,6 @@ function ProjectAbout({ project }: { project: Project }) {
   );
 }
 
-function ProjectPhotos({ project, setCursor }: { project: Project; setCursor: (mode: CursorMode) => void }) {
-  const placeholders = project.photos.length > 0 ? project.photos : Array.from({ length: 4 });
-
-  return (
-    <section className="project-photos">
-      <div className="section-heading">
-        <p className="kicker">Fotos</p>
-        <h2 className="reveal">
-          <SplitText>Registros do projeto</SplitText>
-        </h2>
-      </div>
-      <div className="photo-grid">
-        {placeholders.map((photo, index) =>
-          typeof photo === "string" ? (
-            <figure
-              className="photo-tile"
-              key={photo}
-              onMouseEnter={() => setCursor("play")}
-              onMouseLeave={() => setCursor("default")}
-            >
-              <img src={photo} alt={`${project.title} — foto ${index + 1}`} loading="lazy" />
-            </figure>
-          ) : (
-            <figure className="photo-tile photo-tile--empty" key={index}>
-              <span>Foto em breve</span>
-            </figure>
-          )
-        )}
-      </div>
-    </section>
-  );
-}
-
 function ProjectVideos({ project, setCursor }: { project: Project; setCursor: (mode: CursorMode) => void }) {
   return (
     <section className="project-videos">
@@ -133,7 +100,7 @@ export default function ProjectView({ project }: { project: Project }) {
   useEffect(() => {
     const context = gsap.context(() => {
       gsap.fromTo(
-        ".project-about, .photo-tile, .video-tile, .contact",
+        ".project-about, .video-tile, .contact",
         { opacity: 0, y: 36 },
         {
           opacity: 1,
@@ -158,7 +125,6 @@ export default function ProjectView({ project }: { project: Project }) {
       <SiteHeader setCursor={setCursor} />
       <ProjectHero project={project} />
       <ProjectAbout project={project} />
-      <ProjectPhotos project={project} setCursor={setCursor} />
       <ProjectVideos project={project} setCursor={setCursor} />
       <Contact setCursor={setCursor} />
     </main>

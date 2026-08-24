@@ -15,7 +15,9 @@ import {
   Scramble,
   SiteHeader,
   SplitText,
+  Stats,
   useCinematicScroll,
+  useParallax,
   useTextReveal
 } from "@/components/SiteChrome";
 
@@ -27,6 +29,7 @@ function Hero() {
         src="https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/lagoinha-praia-grande-hero-web.mp4"
         poster={posterFor("/videos/lagoinha-praia-grande-hero-web.mp4")}
         ref={autoplayVideoRef}
+        data-parallax="15"
         autoPlay
         muted
         loop
@@ -146,6 +149,7 @@ export default function Home() {
 
   useCinematicScroll();
   useTextReveal();
+  useParallax();
 
   useEffect(() => {
     const context = gsap.context(() => {
@@ -175,6 +179,7 @@ export default function Home() {
       <SiteHeader setCursor={setCursor} setPreview={setPreview} />
       <Hero />
       <Clients />
+      <Stats />
       <Portfolio setCursor={setCursor} />
       <Hire setCursor={setCursor} />
       <Contact setCursor={setCursor} />

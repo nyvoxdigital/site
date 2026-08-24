@@ -423,6 +423,142 @@ export function useTextReveal() {
   }, []);
 }
 
+// Ties any element with a `data-parallax="<percent>"` attribute to scroll
+// position: it scrubs a vertical shift as its own containing section moves
+// through the viewport. Each target is pre-scaled up by the same percent
+// (via gsap.set) so the extra room it reveals while parallaxing never shows
+// a gap at the edges.
+export function useParallax() {
+  useEffect(() => {
+    const context = gsap.context(() => {
+      gsap.utils.toArray<HTMLElement>("[data-parallax]").forEach((el) => {
+        const amount = Number(el.dataset.parallax) || 15;
+        const section = el.closest("section");
+
+        gsap.set(el, { scale: 1 + amount / 100 });
+        gsap.to(el, {
+          yPercent: amount,
+          ease: "none",
+          scrollTrigger: {
+            trigger: section ?? el,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 0.6
+          }
+        });
+      });
+    });
+
+    return () => context.revert();
+  }, []);
+}
+
+// One-time animated intro shown on the very first page load — it lives in
+// the root layout, which only mounts once per hard load, so it never
+// replays on client-side navigation between routes. Removes itself from
+// the DOM once the reveal finishes.
+export function IntroReveal() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const wordRef = useRef<HTMLSpanElement>(null);
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const word = wordRef.current;
+    if (!root || !word) return;
+
+    document.body.style.overflow = "hidden";
+
+    const timeline = gsap.timeline({
+      onComplete: () => {
+        document.body.style.overflow = "";
+        root.remove();
+        // If the page was opened on a hash (e.g. /#portfolio, the same link
+        // the "Trabalhos" nav item uses), the browser's automatic scroll-to
+        // happens before this runs and gets swallowed by the overflow lock
+        // above — redo it now that scrolling is unblocked again.
+        if (window.location.hash) {
+          document.querySelector(window.location.hash)?.scrollIntoView();
+        }
+      }
+    });
+
+    timeline
+      .set(word, { yPercent: 110 })
+      .to(word, { yPercent: 0, duration: 0.7, ease: "power3.out" })
+      .to(root, { scaleY: 0, duration: 0.7, ease: "power3.inOut", transformOrigin: "top", delay: 0.35 });
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  return (
+    <div ref={rootRef} className="intro-reveal" aria-hidden="true">
+      <span className="intro-reveal__mask">
+        <span className="intro-reveal__word" ref={wordRef}>
+          Studio Motion
+        </span>
+      </span>
+    </div>
+  );
+}
+
+type Stat = { value: number; suffix?: string; label: string };
+
+// Placeholder numbers — swap these for the studio's real figures.
+const stats: Stat[] = [
+  { value: 150, suffix: "+", label: "Projetos entregues" },
+  { value: 40, suffix: "+", label: "Marcas atendidas" },
+  { value: 8, label: "Anos de estrada" }
+];
+
+function StatCounter({ stat }: { stat: Stat }) {
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const counter = { value: 0 };
+    const context = gsap.context(() => {
+      gsap.to(counter, {
+        value: stat.value,
+        duration: 1.6,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: el,
+          start: "top 90%",
+          once: true
+        },
+        onUpdate: () => {
+          el.textContent = `${Math.round(counter.value)}${stat.suffix ?? ""}`;
+        }
+      });
+    });
+
+    return () => context.revert();
+  }, [stat]);
+
+  return (
+    <span className="stats__number" ref={ref}>
+      0{stat.suffix ?? ""}
+    </span>
+  );
+}
+
+export function Stats() {
+  return (
+    <section className="stats" aria-label="Números do estúdio">
+      {stats.map((stat) => (
+        <div className="stats__item" key={stat.label}>
+          <StatCounter stat={stat} />
+          <span className="stats__label">{stat.label}</span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export function SiteHeader({ setCursor, setPreview }: { setCursor: (mode: CursorMode) => void; setPreview?: (src: string | null) => void }) {
   const [solid, setSolid] = useState(false);
 

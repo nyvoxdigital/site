@@ -12,6 +12,7 @@ import {
   SiteHeader,
   SplitText,
   useCinematicScroll,
+  useParallax,
   useTextReveal
 } from "@/components/SiteChrome";
 
@@ -23,6 +24,7 @@ function ProjectHero({ project }: { project: Project }) {
         src={videoSrc(project.video)}
         poster={posterSrc(project.video)}
         ref={autoplayVideoRef}
+        data-parallax="15"
         autoPlay
         muted
         loop
@@ -96,6 +98,7 @@ export default function ProjectView({ project }: { project: Project }) {
 
   useCinematicScroll();
   useTextReveal();
+  useParallax();
 
   useEffect(() => {
     const context = gsap.context(() => {

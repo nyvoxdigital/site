@@ -380,6 +380,60 @@ main {
   white-space: nowrap;
 }
 
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(2.5rem, 5vw, 4rem) clamp(1rem, 5vw, 5rem);
+  background: #050505;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+}
+
+.stats__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.stats__number {
+  font-family: var(--font-display), var(--font-display-fallback);
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  font-weight: 900;
+  color: var(--accent);
+}
+
+.stats__label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.intro-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+}
+
+.intro-reveal__mask {
+  display: inline-block;
+  overflow: hidden;
+}
+
+.intro-reveal__word {
+  display: inline-block;
+  font-family: var(--font-display), var(--font-display-fallback);
+  font-size: clamp(1.4rem, 4vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
 .filmstrip {
   position: relative;
   overflow: hidden;
@@ -441,6 +495,7 @@ main {
 }
 
 .hire {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 0.78fr) minmax(24rem, 1fr);
   gap: clamp(2rem, 6vw, 6rem);
@@ -449,6 +504,46 @@ main {
     linear-gradient(120deg, rgba(224, 66, 59, 0.12), transparent 38%),
     #050505;
   border-top: 1px solid var(--line);
+}
+
+.hire::before,
+.contact::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: min(48vw, 560px);
+  height: min(48vw, 560px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(224, 66, 59, 0.24), transparent 70%);
+  filter: blur(50px);
+  animation: glow-drift 20s ease-in-out infinite;
+}
+
+.hire::before {
+  top: 8%;
+  right: 4%;
+}
+
+.contact::before {
+  bottom: 6%;
+  left: 4%;
+}
+
+@keyframes glow-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-6%, 8%) scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hire::before,
+  .contact::before {
+    animation: none;
+  }
 }
 
 .hire__copy {
@@ -610,6 +705,8 @@ main {
 }
 
 .contact {
+  position: relative;
+  overflow: hidden;
   min-height: 70svh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

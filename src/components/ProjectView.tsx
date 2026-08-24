@@ -24,7 +24,7 @@ function ProjectHero({ project }: { project: Project }) {
         src={videoSrc(project.video)}
         poster={posterSrc(project.video)}
         ref={autoplayVideoRef}
-        data-parallax="15"
+        data-parallax="25"
         autoPlay
         muted
         loop

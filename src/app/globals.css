@@ -420,11 +420,7 @@ main {
   display: flex;
   width: max-content;
   gap: 2px;
-  animation: filmstrip-scroll 50s linear infinite;
-}
-
-.filmstrip__track--paused {
-  animation-play-state: paused;
+  will-change: transform;
 }
 
 .filmstrip-panel {
@@ -435,10 +431,12 @@ main {
   overflow: hidden;
   display: block;
   transition: width 550ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
 
 .filmstrip-panel--active {
   width: clamp(22rem, 38vw, 34rem);
+  z-index: 1;
 }
 
 .filmstrip-panel video {
@@ -455,18 +453,21 @@ main {
   filter: brightness(0.98) saturate(1.05);
 }
 
-@keyframes filmstrip-scroll {
-  from {
-    transform: translateX(0);
+@media (max-width: 767px) {
+  .filmstrip {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
   }
-  to {
-    transform: translateX(-50%);
+
+  .filmstrip-panel {
+    scroll-snap-align: start;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .filmstrip__track {
-    animation: none;
+  .filmstrip-panel {
+    transition: none;
   }
 }
 

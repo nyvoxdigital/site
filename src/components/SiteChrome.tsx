@@ -245,7 +245,7 @@ export function CursorTrail() {
 // Wraps a single focusable element (link, button) and pulls it toward the
 // pointer while hovered, snapping back on leave — the classic "magnetic
 // button" hover effect, built with gsap.quickTo for a cheap, smooth tween.
-export function Magnetic({ children, strength = 0.35 }: { children: ReactElement; strength?: number }) {
+export function Magnetic({ children, strength = 0.55 }: { children: ReactElement; strength?: number }) {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -569,7 +569,18 @@ function FilmstripPanel({
   onDeactivate: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  const tiltX = useRef<ReturnType<typeof gsap.quickTo> | null>(null);
+  const tiltY = useRef<ReturnType<typeof gsap.quickTo> | null>(null);
   const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    const el = linkRef.current;
+    if (!el) return;
+    gsap.set(el, { transformPerspective: 800 });
+    tiltX.current = gsap.quickTo(el, "rotationX", { duration: 0.5, ease: "power3.out" });
+    tiltY.current = gsap.quickTo(el, "rotationY", { duration: 0.5, ease: "power3.out" });
+  }, []);
 
   const activate = () => {
     setActive(true);
@@ -578,18 +589,32 @@ function FilmstripPanel({
     videoRef.current?.play().catch(() => {});
   };
 
+  // 3D tilt: rotates the card toward the pointer's position within it,
+  // like it's tipping in your hand — reset back to flat on leave below.
+  const tilt = (event: React.PointerEvent<HTMLAnchorElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const relX = (event.clientX - rect.left) / rect.width - 0.5;
+    const relY = (event.clientY - rect.top) / rect.height - 0.5;
+    tiltY.current?.(relX * 16);
+    tiltX.current?.(relY * -16);
+  };
+
   const deactivate = () => {
     setActive(false);
     setCursor("default");
     onDeactivate();
     videoRef.current?.pause();
+    tiltX.current?.(0);
+    tiltY.current?.(0);
   };
 
   return (
     <Link
+      ref={linkRef}
       href={`/projetos/${project.slug}`}
       className={`filmstrip-panel${active ? " filmstrip-panel--active" : ""}`}
       onPointerEnter={activate}
+      onPointerMove={tilt}
       onPointerLeave={deactivate}
       tabIndex={0}
     >
@@ -606,33 +631,63 @@ function FilmstripPanel({
   );
 }
 
-// Auto-scrolling filmstrip of every project. The whole strip pauses (CSS
-// animation-play-state) the instant any single panel is hovered/touched, and
-// that panel's video starts playing — resuming the scroll only once no panel
-// is active anymore. The item list is rendered twice back-to-back so the
-// CSS scroll animation can loop seamlessly at -50%.
+// On desktop, the whole section pins in place while the track scrolls
+// sideways as the user scrolls down — a horizontal-scroll section instead of
+// stacking downward. Below the 768px breakpoint that's disabled in favor of
+// a plain swipeable row (gsap.matchMedia handles both, including cleanly
+// tearing the pin down if the viewport crosses the breakpoint).
 export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCursor: (mode: CursorMode) => void }) {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const activeCount = useRef(0);
-  const [paused, setPaused] = useState(false);
 
   const handleActivate = () => {
     activeCount.current += 1;
-    setPaused(true);
   };
 
   const handleDeactivate = () => {
     activeCount.current = Math.max(0, activeCount.current - 1);
-    if (activeCount.current === 0) setPaused(false);
   };
 
-  const loopItems = [...projects, ...projects];
+  useEffect(() => {
+    const section = sectionRef.current;
+    const track = trackRef.current;
+    if (!section || !track) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add("(min-width: 768px)", () => {
+      const distance = track.scrollWidth - window.innerWidth;
+      if (distance <= 0) return;
+
+      const tween = gsap.to(track, {
+        x: -distance,
+        ease: "none",
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: () => `+=${distance}`,
+          scrub: 0.6,
+          pin: true,
+          invalidateOnRefresh: true
+        }
+      });
+
+      return () => {
+        tween.scrollTrigger?.kill();
+        tween.kill();
+      };
+    });
+
+    return () => mm.revert();
+  }, [projects]);
 
   return (
-    <div className="filmstrip">
-      <div className={`filmstrip__track${paused ? " filmstrip__track--paused" : ""}`}>
-        {loopItems.map((project, index) => (
+    <div className="filmstrip" ref={sectionRef}>
+      <div className="filmstrip__track" ref={trackRef}>
+        {projects.map((project) => (
           <FilmstripPanel
-            key={`${project.slug}-${index}`}
+            key={project.slug}
             project={project}
             setCursor={setCursor}
             onActivate={handleActivate}

@@ -29,7 +29,7 @@ function Hero() {
         src="https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/lagoinha-praia-grande-hero-web.mp4"
         poster={posterFor("/videos/lagoinha-praia-grande-hero-web.mp4")}
         ref={autoplayVideoRef}
-        data-parallax="15"
+        data-parallax="25"
         autoPlay
         muted
         loop

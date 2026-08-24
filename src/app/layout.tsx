@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Unbounded } from "next/font/google";
 import "./globals.css";
-import { CursorTrail, IntroReveal, PageTransition } from "@/components/SiteChrome";
+import { CursorTrail, PageTransition } from "@/components/SiteChrome";
 
 const displayFont = Unbounded({
   subsets: ["latin"],
@@ -22,7 +22,6 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={displayFont.variable}>
       <body>
-        <IntroReveal />
         <PageTransition />
         <CursorTrail />
         {children}

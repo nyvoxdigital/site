@@ -453,56 +453,6 @@ export function useParallax() {
   }, []);
 }
 
-// One-time animated intro shown on the very first page load — it lives in
-// the root layout, which only mounts once per hard load, so it never
-// replays on client-side navigation between routes. Removes itself from
-// the DOM once the reveal finishes.
-export function IntroReveal() {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const wordRef = useRef<HTMLSpanElement>(null);
-
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    const word = wordRef.current;
-    if (!root || !word) return;
-
-    document.body.style.overflow = "hidden";
-
-    const timeline = gsap.timeline({
-      onComplete: () => {
-        document.body.style.overflow = "";
-        root.remove();
-        // If the page was opened on a hash (e.g. /#portfolio, the same link
-        // the "Trabalhos" nav item uses), the browser's automatic scroll-to
-        // happens before this runs and gets swallowed by the overflow lock
-        // above — redo it now that scrolling is unblocked again.
-        if (window.location.hash) {
-          document.querySelector(window.location.hash)?.scrollIntoView();
-        }
-      }
-    });
-
-    timeline
-      .set(word, { yPercent: 110 })
-      .to(word, { yPercent: 0, duration: 0.7, ease: "power3.out" })
-      .to(root, { scaleY: 0, duration: 0.7, ease: "power3.inOut", transformOrigin: "top", delay: 0.35 });
-
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
-
-  return (
-    <div ref={rootRef} className="intro-reveal" aria-hidden="true">
-      <span className="intro-reveal__mask">
-        <span className="intro-reveal__word" ref={wordRef}>
-          Studio Motion
-        </span>
-      </span>
-    </div>
-  );
-}
-
 type Stat = { value: number; suffix?: string; label: string };
 
 // Placeholder numbers — swap these for the studio's real figures.

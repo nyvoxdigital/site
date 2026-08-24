@@ -410,30 +410,6 @@ main {
   text-transform: uppercase;
 }
 
-.intro-reveal {
-  position: fixed;
-  inset: 0;
-  z-index: 5000;
-  display: grid;
-  place-items: center;
-  background: var(--paper);
-}
-
-.intro-reveal__mask {
-  display: inline-block;
-  overflow: hidden;
-}
-
-.intro-reveal__word {
-  display: inline-block;
-  font-family: var(--font-display), var(--font-display-fallback);
-  font-size: clamp(1.4rem, 4vw, 2.4rem);
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink);
-}
-
 .filmstrip {
   position: relative;
   overflow: hidden;

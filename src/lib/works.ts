@@ -176,10 +176,3 @@ export function videoSrc(video: string) {
   return filename ? `${R2_BASE_URL}/${encodeURIComponent(filename)}` : video;
 }
 
-// While a video is on the placeholder, its thumbnail should be the
-// placeholder's thumbnail too — not the real project's old poster image.
-const PLACEHOLDER_POSTER = "/videos/alecgol-gillette-2-poster.jpg";
-
-export function posterSrc(video: string) {
-  return r2Overrides[video] ? PLACEHOLDER_POSTER : posterFor(video);
-}

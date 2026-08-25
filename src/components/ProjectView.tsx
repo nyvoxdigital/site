@@ -2,7 +2,7 @@
 
 import gsap from "gsap";
 import { useEffect, useState } from "react";
-import { posterSrc, videoSrc, type Project } from "@/lib/works";
+import { videoSrc, type Project } from "@/lib/works";
 import {
   autoplayVideoRef,
   Contact,
@@ -22,7 +22,6 @@ function ProjectHero({ project }: { project: Project }) {
       <video
         className="project-hero__video"
         src={videoSrc(project.video)}
-        poster={posterSrc(project.video)}
         ref={autoplayVideoRef}
         data-parallax="25"
         autoPlay
@@ -78,7 +77,6 @@ function ProjectVideos({ project, setCursor }: { project: Project; setCursor: (m
           >
             <video
               src={videoSrc(video)}
-              poster={posterSrc(video)}
               ref={lazyAutoplayVideoRef}
               muted
               loop

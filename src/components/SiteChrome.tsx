@@ -17,7 +17,7 @@ import {
   type Ref
 } from "react";
 import { FiArrowUpRight, FiMail } from "react-icons/fi";
-import { posterSrc, videoSrc, type Project } from "@/lib/works";
+import { videoSrc, type Project } from "@/lib/works";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -621,7 +621,6 @@ function FilmstripPanel({
       <video
         ref={videoRef}
         src={videoSrc(project.video)}
-        poster={posterSrc(project.video)}
         muted
         loop
         playsInline

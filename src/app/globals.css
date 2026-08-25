@@ -453,18 +453,6 @@ main {
   filter: brightness(0.98) saturate(1.05);
 }
 
-@media (max-width: 767px) {
-  .filmstrip {
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .filmstrip-panel {
-    scroll-snap-align: start;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .filmstrip-panel {
     transition: none;

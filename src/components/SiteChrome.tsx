@@ -630,11 +630,10 @@ function FilmstripPanel({
   );
 }
 
-// On desktop, the whole section pins in place while the track scrolls
-// sideways as the user scrolls down — a horizontal-scroll section instead of
-// stacking downward. Below the 768px breakpoint that's disabled in favor of
-// a plain swipeable row (gsap.matchMedia handles both, including cleanly
-// tearing the pin down if the viewport crosses the breakpoint).
+// The whole section pins in place while the track scrolls sideways as the
+// user scrolls down — a horizontal-scroll section instead of stacking
+// downward, on every screen size (touch scroll drives it the same way a
+// mouse wheel does).
 export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCursor: (mode: CursorMode) => void }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -653,13 +652,11 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
     const track = trackRef.current;
     if (!section || !track) return;
 
-    const mm = gsap.matchMedia();
-
-    mm.add("(min-width: 768px)", () => {
+    const context = gsap.context(() => {
       const distance = track.scrollWidth - window.innerWidth;
       if (distance <= 0) return;
 
-      const tween = gsap.to(track, {
+      gsap.to(track, {
         x: -distance,
         ease: "none",
         scrollTrigger: {
@@ -671,14 +668,9 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
           invalidateOnRefresh: true
         }
       });
-
-      return () => {
-        tween.scrollTrigger?.kill();
-        tween.kill();
-      };
     });
 
-    return () => mm.revert();
+    return () => context.revert();
   }, [projects]);
 
   return (

@@ -707,12 +707,23 @@ const brands: Brand[] = [
 // asset is added.
 function ClientLogo({ name, src }: Brand) {
   const [broken, setBroken] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    // A missing file often 404s before React attaches the onError handler
+    // below, so the browser's own broken-image icon shows up instead of the
+    // text fallback. Catch that already-failed state on mount too.
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth === 0) {
+      setBroken(true);
+    }
+  }, []);
 
   if (broken) {
     return <span className="clients__fallback">{name}</span>;
   }
 
-  return <img src={src} alt={name} loading="lazy" onError={() => setBroken(true)} />;
+  return <img ref={imgRef} src={src} alt={name} loading="lazy" onError={() => setBroken(true)} />;
 }
 
 // Looped twice so the CSS scroll animation can wrap seamlessly at -50%,

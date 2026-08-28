@@ -176,3 +176,12 @@ export function videoSrc(video: string) {
   return filename ? `${R2_BASE_URL}/${encodeURIComponent(filename)}` : video;
 }
 
+// A frame pulled from the placeholder clip itself, so the poster always
+// matches whatever's about to play — swap per-project once real footage
+// replaces the placeholder in r2Overrides above.
+const PLACEHOLDER_POSTER = "/videos/placeholder-poster.jpg";
+
+export function posterSrc(video: string) {
+  return r2Overrides[video] ? PLACEHOLDER_POSTER : posterFor(video);
+}
+

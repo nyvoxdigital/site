@@ -3,7 +3,7 @@
 import gsap from "gsap";
 import { useEffect, useState } from "react";
 import { FiArrowRight } from "react-icons/fi";
-import { posterFor, projects } from "@/lib/works";
+import { projects } from "@/lib/works";
 import {
   autoplayVideoRef,
   Clients,
@@ -27,7 +27,6 @@ function Hero() {
       <video
         className="hero__video"
         src="https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/melhores%20takes.mp4"
-        poster={posterFor("/videos/lagoinha-praia-grande-hero-web.mp4")}
         ref={autoplayVideoRef}
         data-parallax="25"
         autoPlay

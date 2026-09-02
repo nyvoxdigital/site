@@ -26,7 +26,7 @@ function Hero() {
     <section className="hero" id="topo">
       <video
         className="hero__video"
-        src="https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/melhores%20takes.mp4"
+        src="https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/melhores-takes-comprimido.mp4"
         ref={autoplayVideoRef}
         data-parallax="25"
         autoPlay

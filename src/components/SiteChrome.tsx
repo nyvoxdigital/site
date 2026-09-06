@@ -269,10 +269,16 @@ export function BackgroundVideo({
     // assigning currentTime on a paused video decodes and presents that frame. So when
     // playback is refused we advance the video by hand and paint each frame, which gives
     // real motion from the same file with no second asset to ship.
-    const FALLBACK_FPS = 12;
+    // Seeking is far slower than decoding a playing stream, and how slow varies by device.
+    // So the step is taken from the wall clock rather than a fixed frame count: the clip
+    // then runs at its true speed everywhere, and a slow device loses frames instead of
+    // drifting into slow motion. The cap keeps a fast device from seeking flat out.
+    const MIN_FRAME_MS = 1000 / 15;
+    const MAX_STEP_SECONDS = 0.5;
     let seeking = false;
     let seekTimer = 0;
     let onScreen = true;
+    let lastStepAt = 0;
 
     const stopSeekFallback = () => {
       seeking = false;
@@ -293,11 +299,16 @@ export function BackgroundVideo({
         if (disposed || !seeking) return;
         paint();
         const spent = performance.now() - startedAt;
-        seekTimer = window.setTimeout(stepFrame, Math.max(0, 1000 / FALLBACK_FPS - spent));
+        seekTimer = window.setTimeout(stepFrame, Math.max(0, MIN_FRAME_MS - spent));
       };
 
       video.addEventListener("seeked", onSeeked);
-      const next = video.currentTime + 1 / FALLBACK_FPS;
+      // How much of the clip to skip past: the time the previous frame actually took,
+      // clamped so a stall does not jump half the video at once.
+      const elapsed = lastStepAt === 0 ? MIN_FRAME_MS : startedAt - lastStepAt;
+      lastStepAt = startedAt;
+      const step = Math.min(Math.max(elapsed / 1000, MIN_FRAME_MS / 1000), MAX_STEP_SECONDS);
+      const next = video.currentTime + step;
       video.currentTime = next >= video.duration ? 0 : next;
     };
 
@@ -325,6 +336,7 @@ export function BackgroundVideo({
       }
       if (!seeking) {
         seeking = true;
+        lastStepAt = 0;
         stepFrame();
       }
     };

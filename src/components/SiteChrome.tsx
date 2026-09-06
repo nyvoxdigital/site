@@ -59,8 +59,18 @@ function resumeVideosThatShouldPlay() {
 // rejected play(), keep nudging every video that should be running until it actually is.
 // The timer stops as soon as nothing is left paused, so it costs nothing in the normal
 // case where autoplay works immediately.
+const RETRY_INTERVAL_MS = 400;
+const MAX_RETRIES = 30;
+
+function stopRetries() {
+  if (retryTimer === null) return;
+  clearInterval(retryTimer);
+  retryTimer = null;
+}
+
 function scheduleRetries() {
   if (retryTimer !== null || typeof window === "undefined") return;
+  let attempts = 0;
 
   retryTimer = setInterval(() => {
     if (document.visibilityState !== "visible") return;
@@ -73,11 +83,12 @@ function scheduleRetries() {
       }
     });
 
-    if (!stillPaused && retryTimer !== null) {
-      clearInterval(retryTimer);
-      retryTimer = null;
-    }
-  }, 400);
+    // Give up after ~12s: at that point autoplay is not merely slow, it is blocked
+    // (iOS Low Power Mode is the usual reason), and only a user gesture will lift it.
+    // The gesture and visibility listeners below take over from here.
+    attempts += 1;
+    if (!stillPaused || attempts >= MAX_RETRIES) stopRetries();
+  }, RETRY_INTERVAL_MS);
 }
 
 // Belt and braces on top of the timer: retry on the first real user gesture and whenever

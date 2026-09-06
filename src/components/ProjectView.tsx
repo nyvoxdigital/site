@@ -4,7 +4,7 @@ import gsap from "gsap";
 import { useEffect, useState } from "react";
 import { posterSrc, videoSrc, type Project } from "@/lib/works";
 import {
-  autoplayVideoRef,
+  BackgroundVideo,
   Contact,
   Cursor,
   CursorMode,
@@ -19,17 +19,11 @@ import {
 function ProjectHero({ project }: { project: Project }) {
   return (
     <section className="project-hero">
-      <video
-        className="project-hero__video"
+      <BackgroundVideo
+        block="project-hero"
         src={videoSrc(project.video)}
         poster={posterSrc(project.video)}
-        ref={autoplayVideoRef}
-        data-parallax="25"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
+        parallax="25"
       />
       <div className="grain" />
       <div className="project-hero__copy">

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { FiArrowRight } from "react-icons/fi";
 import { projects } from "@/lib/works";
 import {
-  autoplayVideoRef,
+  BackgroundVideo,
   Clients,
   Contact,
   Cursor,
@@ -25,16 +25,10 @@ import {
 function Hero() {
   return (
     <section className="hero" id="topo">
-      <video
-        className="hero__video"
+      <BackgroundVideo
+        block="hero"
         src="https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev/melhores-takes-comprimido.mp4"
-        ref={autoplayVideoRef}
-        data-parallax="25"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
+        parallax="25"
       />
       <div className="grain" />
       <div className="hero__copy">

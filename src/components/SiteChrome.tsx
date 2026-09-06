@@ -48,7 +48,8 @@ function prepareBackgroundVideo(video: HTMLVideoElement) {
 // (NotAllowedError) from "this file will not decode" (NotSupportedError).
 export const videoDiagnostics = {
   attempts: 0,
-  lastOutcome: "ainda nao tentou"
+  lastOutcome: "ainda nao tentou",
+  canvasFrames: 0
 };
 
 function playNow(video: HTMLVideoElement) {
@@ -152,6 +153,149 @@ export function autoplayVideoRef(video: HTMLVideoElement | null) {
   RESUME_EVENTS.forEach((event) => video.addEventListener(event, tryPlay));
 }
 
+// On a client-side navigation the old hero unmounts, and a detached video can never
+// start playing — leaving it in the set would keep the retry loop chasing it.
+export function releaseAutoplayVideo(video: HTMLVideoElement | null) {
+  if (video) videosThatShouldPlay.delete(video);
+}
+
+// iOS paints a "start playback" button over any video it will not autoplay, and the CSS
+// escape hatch for it (::-webkit-media-controls-start-playback-button) no longer reaches
+// the modern media controls, which live in a closed shadow root. So the visible layer is
+// a <canvas> fed from the video instead: a canvas has no native controls to draw.
+//
+// The <video> itself stays laid out at full size underneath — WebKit refuses to play a
+// video it considers invisible, so hiding it would trade the button for no playback at
+// all. The canvas simply covers it, and only once a frame has actually been painted, so
+// a browser that cannot draw the video falls back to showing the video as before.
+export function BackgroundVideo({
+  block,
+  src,
+  poster,
+  parallax
+}: {
+  block: string;
+  src: string;
+  poster?: string;
+  parallax?: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    if (!canvas || !video) return;
+
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) return;
+
+    let disposed = false;
+    let rafHandle = 0;
+    let frameHandle = 0;
+    let painted = false;
+
+    // The backing store follows the element's box but is capped: this is a dimmed,
+    // full-bleed background, so a phone's full 3x pixel ratio would cost real battery
+    // for detail nobody can see.
+    const MAX_BACKING_PX = 1600;
+
+    const resizeBacking = () => {
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const width = canvas.clientWidth * ratio;
+      const height = canvas.clientHeight * ratio;
+      if (width === 0 || height === 0) return false;
+
+      const fit = Math.min(1, MAX_BACKING_PX / Math.max(width, height));
+      const nextWidth = Math.round(width * fit);
+      const nextHeight = Math.round(height * fit);
+      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+      }
+      return true;
+    };
+
+    // Reproduces object-fit: cover, which the canvas does not get for free.
+    const paint = () => {
+      if (disposed || video.readyState < 2) return;
+      if (!video.videoWidth || !video.videoHeight || !resizeBacking()) return;
+
+      const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
+      const drawWidth = video.videoWidth * scale;
+      const drawHeight = video.videoHeight * scale;
+      context.drawImage(
+        video,
+        (canvas.width - drawWidth) / 2,
+        (canvas.height - drawHeight) / 2,
+        drawWidth,
+        drawHeight
+      );
+
+      videoDiagnostics.canvasFrames += 1;
+      if (!painted) {
+        painted = true;
+        canvas.dataset.painted = "true";
+      }
+    };
+
+    // requestVideoFrameCallback fires once per decoded frame, so it neither drops frames
+    // nor burns a repaint on a paused video. rAF is the fallback where it is missing.
+    const hasFrameCallback = typeof video.requestVideoFrameCallback === "function";
+
+    const loop = () => {
+      if (disposed) return;
+      paint();
+      if (hasFrameCallback) {
+        frameHandle = video.requestVideoFrameCallback(loop);
+      } else {
+        rafHandle = requestAnimationFrame(loop);
+      }
+    };
+
+    loop();
+
+    // A paused video still has a frame to show; these are the moments it becomes
+    // available, or the canvas box changes and the old frame no longer fits.
+    const repaintEvents = ["loadeddata", "canplay", "seeked", "play", "playing"];
+    repaintEvents.forEach((event) => video.addEventListener(event, paint));
+    window.addEventListener("resize", paint);
+    window.addEventListener("orientationchange", paint);
+
+    return () => {
+      disposed = true;
+      releaseAutoplayVideo(video);
+      if (rafHandle) cancelAnimationFrame(rafHandle);
+      if (frameHandle && typeof video.cancelVideoFrameCallback === "function") {
+        video.cancelVideoFrameCallback(frameHandle);
+      }
+      repaintEvents.forEach((event) => video.removeEventListener(event, paint));
+      window.removeEventListener("resize", paint);
+      window.removeEventListener("orientationchange", paint);
+    };
+  }, []);
+
+  return (
+    <>
+      <video
+        className={`${block}__video`}
+        src={src}
+        poster={poster}
+        ref={(node) => {
+          videoRef.current = node;
+          autoplayVideoRef(node);
+        }}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+      />
+      <canvas className={`${block}__canvas`} ref={canvasRef} data-parallax={parallax} aria-hidden />
+    </>
+  );
+}
+
 const MEDIA_ERROR_NAMES: Record<number, string> = {
   1: "ABORTED",
   2: "NETWORK",
@@ -189,6 +333,7 @@ export function VideoDebugOverlay() {
           `bufferizado . ${video.buffered.length ? `${video.buffered.end(0).toFixed(1)}s` : "nada"}`,
           `erro ........ ${error ? `${MEDIA_ERROR_NAMES[error.code] ?? error.code} ${error.message}` : "nenhum"}`,
           `tentativas .. ${videoDiagnostics.attempts}`,
+          `canvas ...... ${videoDiagnostics.canvasFrames} quadros`,
           `ultimo play . ${videoDiagnostics.lastOutcome}`
         ].join("\n")
       );

@@ -209,9 +209,11 @@ main {
   filter: brightness(0.62) saturate(0.88);
 }
 
-/* The canvas is the layer people actually see. It sits above the video and below the
-   grain, and stays transparent until it has painted a real frame, so a browser that
-   cannot draw the video keeps showing the video itself rather than a blank rectangle. */
+/* The canvas is the layer people actually see: it sits above the video and below the
+   grain. It is opaque from the first paint of the page, before any script runs, because
+   the seconds a video spends buffering are exactly when iOS draws its play button over
+   it. Until the first frame arrives it shows the page's own background, so the hero
+   darkens into place instead of flashing a control nobody asked for. */
 .hero__canvas,
 .project-hero__canvas {
   position: absolute;
@@ -219,14 +221,9 @@ main {
   z-index: -3;
   width: 100%;
   height: 100%;
-  opacity: 0;
+  background: var(--paper);
   pointer-events: none;
   filter: brightness(0.62) saturate(0.88);
-}
-
-.hero__canvas[data-painted="true"],
-.project-hero__canvas[data-painted="true"] {
-  opacity: 1;
 }
 
 /* Background videos are decorative: they must never take a tap and never show native

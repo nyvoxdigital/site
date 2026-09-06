@@ -171,12 +171,11 @@ export function BackgroundVideo({
     let disposed = false;
     let rafHandle = 0;
     let frameHandle = 0;
-    let painted = false;
 
     // The backing store follows the element's box but is capped: this is a dimmed,
     // full-bleed background, so a phone's full 3x pixel ratio would cost real battery
     // for detail nobody can see.
-    const MAX_BACKING_PX = 1600;
+    const MAX_BACKING_PX = 1280;
 
     const resizeBacking = () => {
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -210,10 +209,6 @@ export function BackgroundVideo({
         drawHeight
       );
 
-      if (!painted) {
-        painted = true;
-        canvas.dataset.painted = "true";
-      }
     };
 
     // requestVideoFrameCallback fires once per decoded frame, so it neither drops frames
@@ -249,7 +244,10 @@ export function BackgroundVideo({
     // So the step is taken from the wall clock rather than a fixed frame count: the clip
     // then runs at its true speed everywhere, and a slow device loses frames instead of
     // drifting into slow motion. The cap keeps a fast device from seeking flat out.
-    const MIN_FRAME_MS = 1000 / 15;
+    // 10fps rather than something smoother: every frame here costs a decode, and on a
+    // phone that work competes directly with scrolling. A dimmed background reads fine
+    // at this rate, and a janky page does not.
+    const MIN_FRAME_MS = 1000 / 10;
     const MAX_STEP_SECONDS = 0.5;
     let seeking = false;
     let seekTimer = 0;
@@ -326,7 +324,11 @@ export function BackgroundVideo({
     observer?.observe(canvas);
 
     const reconcileTimer = setInterval(reconcile, 1500);
-    const firstCheck = setTimeout(reconcile, 1200);
+    const firstCheck = setTimeout(reconcile, 300);
+    // loadeddata is the earliest moment a frame exists to seek through, so the hero
+    // starts moving then instead of waiting out the poll interval.
+    video.addEventListener("loadeddata", reconcile);
+    video.addEventListener("canplay", reconcile);
     video.addEventListener("playing", reconcile);
     video.addEventListener("pause", reconcile);
     document.addEventListener("visibilitychange", reconcile);
@@ -337,6 +339,8 @@ export function BackgroundVideo({
       clearInterval(reconcileTimer);
       clearTimeout(firstCheck);
       observer?.disconnect();
+      video.removeEventListener("loadeddata", reconcile);
+      video.removeEventListener("canplay", reconcile);
       video.removeEventListener("playing", reconcile);
       video.removeEventListener("pause", reconcile);
       document.removeEventListener("visibilitychange", reconcile);

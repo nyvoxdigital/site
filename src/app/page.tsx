@@ -18,8 +18,7 @@ import {
   Stats,
   useCinematicScroll,
   useParallax,
-  useTextReveal,
-  VideoDebugOverlay
+  useTextReveal
 } from "@/components/SiteChrome";
 
 function Hero() {
@@ -42,7 +41,6 @@ function Hero() {
         </h1>
       </div>
       <span className="scroll-cue">Role</span>
-      <VideoDebugOverlay />
     </section>
   );
 }

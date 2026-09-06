@@ -43,16 +43,6 @@ function prepareBackgroundVideo(video: HTMLVideoElement) {
   video.disableRemotePlayback = true;
 }
 
-// Why a play() attempt failed, surfaced by <VideoDebugOverlay /> on ?debug=video. The
-// rejection name is the only thing that tells apart "the browser's policy refused this"
-// (NotAllowedError) from "this file will not decode" (NotSupportedError).
-export const videoDiagnostics = {
-  attempts: 0,
-  lastOutcome: "ainda nao tentou",
-  canvasFrames: 0,
-  mode: "?"
-};
-
 function playNow(video: HTMLVideoElement) {
   video.muted = true;
   // A browser that refused to preload (iOS Low Data Mode does exactly this) leaves the
@@ -60,20 +50,7 @@ function playNow(video: HTMLVideoElement) {
   // Kicking off load() first gives it something to actually play.
   if (video.readyState === 0 && video.networkState !== 2) video.load();
 
-  videoDiagnostics.attempts += 1;
-  const started = video.play();
-  if (!started) {
-    videoDiagnostics.lastOutcome = "play() nao retornou promise";
-    return;
-  }
-  started.then(
-    () => {
-      videoDiagnostics.lastOutcome = "OK (play resolvido)";
-    },
-    (error: DOMException) => {
-      videoDiagnostics.lastOutcome = `${error.name}: ${error.message}`;
-    }
-  );
+  video.play().catch(() => {});
 }
 
 function resumeVideosThatShouldPlay() {
@@ -233,7 +210,6 @@ export function BackgroundVideo({
         drawHeight
       );
 
-      videoDiagnostics.canvasFrames += 1;
       if (!painted) {
         painted = true;
         canvas.dataset.painted = "true";
@@ -324,12 +300,6 @@ export function BackgroundVideo({
         onScreen &&
         document.visibilityState === "visible";
 
-      videoDiagnostics.mode = video.paused
-        ? shouldSeek
-          ? "seek (play bloqueado)"
-          : "parado"
-        : "reproduzindo";
-
       if (!shouldSeek) {
         stopSeekFallback();
         return;
@@ -399,80 +369,6 @@ export function BackgroundVideo({
       />
       <canvas className={`${block}__canvas`} ref={canvasRef} data-parallax={parallax} aria-hidden />
     </>
-  );
-}
-
-const MEDIA_ERROR_NAMES: Record<number, string> = {
-  1: "ABORTED",
-  2: "NETWORK",
-  3: "DECODE",
-  4: "SRC_NOT_SUPPORTED"
-};
-
-// Opt-in via ?debug=video, so ordinary visitors never see it. Reports what the hero video
-// is actually doing on the device in hand, which is the only way to tell a browser policy
-// block apart from a broken file or a stale deploy.
-export function VideoDebugOverlay() {
-  const [report, setReport] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!new URLSearchParams(window.location.search).has("debug")) return;
-
-    const read = () => {
-      const video = document.querySelector<HTMLVideoElement>(".hero__video");
-      if (!video) {
-        setReport("nenhum .hero__video encontrado na pagina");
-        return;
-      }
-
-      const error = video.error;
-      setReport(
-        [
-          `build ....... ${process.env.NEXT_PUBLIC_BUILD_ID ?? "?"}`,
-          `pausado ..... ${video.paused}`,
-          `tempo ....... ${video.currentTime.toFixed(2)}s de ${Number.isFinite(video.duration) ? video.duration.toFixed(2) : "?"}s`,
-          `readyState .. ${video.readyState}`,
-          `networkState  ${video.networkState}`,
-          `mudo ........ ${video.muted} (attr: ${video.hasAttribute("muted")})`,
-          `inline ...... ${video.hasAttribute("playsinline")}`,
-          `controles ... ${video.controls}`,
-          `bufferizado . ${video.buffered.length ? `${video.buffered.end(0).toFixed(1)}s` : "nada"}`,
-          `erro ........ ${error ? `${MEDIA_ERROR_NAMES[error.code] ?? error.code} ${error.message}` : "nenhum"}`,
-          `tentativas .. ${videoDiagnostics.attempts}`,
-          `canvas ...... ${videoDiagnostics.canvasFrames} quadros`,
-          `modo ........ ${videoDiagnostics.mode}`,
-          `ultimo play . ${videoDiagnostics.lastOutcome}`
-        ].join("\n")
-      );
-    };
-
-    read();
-    const timer = setInterval(read, 500);
-    return () => clearInterval(timer);
-  }, []);
-
-  if (report === null) return null;
-
-  return (
-    <pre
-      style={{
-        position: "fixed",
-        top: "4.5rem",
-        left: "0.5rem",
-        right: "0.5rem",
-        zIndex: 9999,
-        margin: 0,
-        padding: "0.75rem",
-        background: "rgba(0, 0, 0, 0.88)",
-        color: "#7CFF9B",
-        font: "600 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace",
-        whiteSpace: "pre-wrap",
-        pointerEvents: "none",
-        borderRadius: "6px"
-      }}
-    >
-      {report}
-    </pre>
   );
 }
 

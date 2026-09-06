@@ -49,7 +49,8 @@ function prepareBackgroundVideo(video: HTMLVideoElement) {
 export const videoDiagnostics = {
   attempts: 0,
   lastOutcome: "ainda nao tentou",
-  canvasFrames: 0
+  canvasFrames: 0,
+  mode: "?"
 };
 
 function playNow(video: HTMLVideoElement) {
@@ -262,8 +263,101 @@ export function BackgroundVideo({
     window.addEventListener("resize", paint);
     window.addEventListener("orientationchange", paint);
 
+    // ---- Fallback for platforms that refuse play() outright ----
+    // iOS in Low Power Mode rejects play() with NotAllowedError even for a muted inline
+    // video that is already fully buffered. Seeking, however, is not gated by that policy:
+    // assigning currentTime on a paused video decodes and presents that frame. So when
+    // playback is refused we advance the video by hand and paint each frame, which gives
+    // real motion from the same file with no second asset to ship.
+    const FALLBACK_FPS = 12;
+    let seeking = false;
+    let seekTimer = 0;
+    let onScreen = true;
+
+    const stopSeekFallback = () => {
+      seeking = false;
+      clearTimeout(seekTimer);
+    };
+
+    const stepFrame = () => {
+      if (disposed || !seeking) return;
+      // Real playback took over (or the hero scrolled away) — hand the frames back.
+      if (!video.paused || !onScreen || document.visibilityState !== "visible") {
+        stopSeekFallback();
+        return;
+      }
+
+      const startedAt = performance.now();
+      const onSeeked = () => {
+        video.removeEventListener("seeked", onSeeked);
+        if (disposed || !seeking) return;
+        paint();
+        const spent = performance.now() - startedAt;
+        seekTimer = window.setTimeout(stepFrame, Math.max(0, 1000 / FALLBACK_FPS - spent));
+      };
+
+      video.addEventListener("seeked", onSeeked);
+      const next = video.currentTime + 1 / FALLBACK_FPS;
+      video.currentTime = next >= video.duration ? 0 : next;
+    };
+
+    // Reconciles the two modes rather than deciding once: playback can be granted later
+    // (the first tap lifts the block) and can be taken away again.
+    const reconcile = () => {
+      if (disposed) return;
+      const shouldSeek =
+        video.paused &&
+        video.readyState >= 2 &&
+        Number.isFinite(video.duration) &&
+        video.duration > 0 &&
+        onScreen &&
+        document.visibilityState === "visible";
+
+      videoDiagnostics.mode = video.paused
+        ? shouldSeek
+          ? "seek (play bloqueado)"
+          : "parado"
+        : "reproduzindo";
+
+      if (!shouldSeek) {
+        stopSeekFallback();
+        return;
+      }
+      if (!seeking) {
+        seeking = true;
+        stepFrame();
+      }
+    };
+
+    // Seeking costs decode work on every frame, so it must not run for a hero that has
+    // scrolled out of view or a tab in the background.
+    const observer =
+      typeof IntersectionObserver === "undefined"
+        ? null
+        : new IntersectionObserver(
+            (entries) => {
+              onScreen = entries[entries.length - 1].isIntersecting;
+              reconcile();
+            },
+            { threshold: 0 }
+          );
+    observer?.observe(canvas);
+
+    const reconcileTimer = setInterval(reconcile, 1500);
+    const firstCheck = setTimeout(reconcile, 1200);
+    video.addEventListener("playing", reconcile);
+    video.addEventListener("pause", reconcile);
+    document.addEventListener("visibilitychange", reconcile);
+
     return () => {
       disposed = true;
+      stopSeekFallback();
+      clearInterval(reconcileTimer);
+      clearTimeout(firstCheck);
+      observer?.disconnect();
+      video.removeEventListener("playing", reconcile);
+      video.removeEventListener("pause", reconcile);
+      document.removeEventListener("visibilitychange", reconcile);
       releaseAutoplayVideo(video);
       if (rafHandle) cancelAnimationFrame(rafHandle);
       if (frameHandle && typeof video.cancelVideoFrameCallback === "function") {
@@ -334,6 +428,7 @@ export function VideoDebugOverlay() {
           `erro ........ ${error ? `${MEDIA_ERROR_NAMES[error.code] ?? error.code} ${error.message}` : "nenhum"}`,
           `tentativas .. ${videoDiagnostics.attempts}`,
           `canvas ...... ${videoDiagnostics.canvasFrames} quadros`,
+          `modo ........ ${videoDiagnostics.mode}`,
           `ultimo play . ${videoDiagnostics.lastOutcome}`
         ].join("\n")
       );

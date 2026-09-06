@@ -208,6 +208,64 @@ main {
   filter: brightness(0.62) saturate(0.88);
 }
 
+/* Background videos are decorative: they must never take a tap and never show native
+   controls. iOS in particular draws a big "start playback" button over any video it
+   decides the user has to start by hand, which is what we hide here. */
+.hero__video,
+.project-hero__video {
+  pointer-events: none;
+}
+
+.hero__video::-webkit-media-controls,
+.project-hero__video::-webkit-media-controls,
+.filmstrip-panel video::-webkit-media-controls,
+.video-tile video::-webkit-media-controls {
+  display: none !important;
+  opacity: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.hero__video::-webkit-media-controls-panel,
+.project-hero__video::-webkit-media-controls-panel,
+.filmstrip-panel video::-webkit-media-controls-panel,
+.video-tile video::-webkit-media-controls-panel {
+  display: none !important;
+  opacity: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.hero__video::-webkit-media-controls-start-playback-button,
+.project-hero__video::-webkit-media-controls-start-playback-button,
+.filmstrip-panel video::-webkit-media-controls-start-playback-button,
+.video-tile video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  opacity: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.hero__video::-webkit-media-controls-play-button,
+.project-hero__video::-webkit-media-controls-play-button,
+.filmstrip-panel video::-webkit-media-controls-play-button,
+.video-tile video::-webkit-media-controls-play-button {
+  display: none !important;
+  opacity: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.hero__video::-webkit-media-controls-overlay-play-button,
+.project-hero__video::-webkit-media-controls-overlay-play-button,
+.filmstrip-panel video::-webkit-media-controls-overlay-play-button,
+.video-tile video::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+  opacity: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .grain {
   position: absolute;
   inset: -40%;

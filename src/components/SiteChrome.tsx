@@ -24,47 +24,95 @@ gsap.registerPlugin(ScrollTrigger);
 export type CursorMode = "default" | "play" | "link" | "preview";
 
 // Videos that should be playing right now (either always-visible hero videos, or lazy
-// cards currently scrolled into view). Only these get retried on the first user gesture —
-// videos that are off-screen and intentionally paused must stay paused.
+// cards currently scrolled into view). Only these get retried — videos that are
+// off-screen and intentionally paused must stay paused.
 const videosThatShouldPlay = new Set<HTMLVideoElement>();
 let unlockListenerAttached = false;
+let retryTimer: ReturnType<typeof setInterval> | null = null;
+
+// A background video is decorative: it is always muted, never shows controls and never
+// takes a tap. Setting the attributes (not just the properties) matters on iOS, where the
+// native "start playback" button appears on any video the browser thinks is user-driven.
+function prepareBackgroundVideo(video: HTMLVideoElement) {
+  video.muted = true;
+  video.defaultMuted = true;
+  video.controls = false;
+  video.setAttribute("muted", "");
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  video.disableRemotePlayback = true;
+}
+
+function playNow(video: HTMLVideoElement) {
+  video.muted = true;
+  video.play().catch(() => {});
+}
 
 function resumeVideosThatShouldPlay() {
   videosThatShouldPlay.forEach((video) => {
-    if (video.paused) {
-      video.muted = true;
-      video.play().catch(() => {});
+    if (video.paused) playNow(video);
+  });
+}
+
+// Mobile browsers refuse the first autoplay attempt in several situations (iOS Low Power
+// Mode, data saver, a page restored in a background tab). Instead of giving up after one
+// rejected play(), keep nudging every video that should be running until it actually is.
+// The timer stops as soon as nothing is left paused, so it costs nothing in the normal
+// case where autoplay works immediately.
+function scheduleRetries() {
+  if (retryTimer !== null || typeof window === "undefined") return;
+
+  retryTimer = setInterval(() => {
+    if (document.visibilityState !== "visible") return;
+
+    let stillPaused = false;
+    videosThatShouldPlay.forEach((video) => {
+      if (video.paused) {
+        stillPaused = true;
+        playNow(video);
+      }
+    });
+
+    if (!stillPaused && retryTimer !== null) {
+      clearInterval(retryTimer);
+      retryTimer = null;
+    }
+  }, 400);
+}
+
+// Belt and braces on top of the timer: retry on the first real user gesture and whenever
+// the tab comes back to the foreground, which is when a blocked autoplay is most likely
+// to be allowed through.
+function ensureUnlockListener() {
+  if (typeof window === "undefined") return;
+  scheduleRetries();
+  if (unlockListenerAttached) return;
+  unlockListenerAttached = true;
+
+  const events: (keyof WindowEventMap)[] = ["touchstart", "touchend", "pointerdown", "click", "scroll", "keydown"];
+  events.forEach((event) => window.addEventListener(event, resumeVideosThatShouldPlay, { passive: true }));
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      resumeVideosThatShouldPlay();
+      scheduleRetries();
     }
   });
 }
 
-// Some mobile browsers (notably iOS Safari in Low Power Mode) silently refuse the very
-// first autoplay attempt and only allow playback after a genuine user gesture on the
-// page. This retries every currently-visible video on the first touch/scroll/key press
-// so playback starts as soon as possible without needing the user to tap the video itself.
-function ensureUnlockListener() {
-  if (unlockListenerAttached || typeof window === "undefined") return;
-  unlockListenerAttached = true;
-
-  const events: (keyof WindowEventMap)[] = ["touchstart", "pointerdown", "scroll", "keydown"];
-  const handler = () => {
-    resumeVideosThatShouldPlay();
-    events.forEach((event) => window.removeEventListener(event, handler));
-  };
-
-  events.forEach((event) => window.addEventListener(event, handler, { passive: true }));
-}
+// Events after which a video that is supposed to loop forever might be sitting paused:
+// the source becoming playable, a stall on a flaky mobile connection, or the browser
+// pausing it on us.
+const RESUME_EVENTS = ["loadedmetadata", "loadeddata", "canplay", "stalled", "suspend", "pause", "ended"];
 
 export function autoplayVideoRef(video: HTMLVideoElement | null) {
   if (!video) return;
-  video.muted = true;
+  prepareBackgroundVideo(video);
   videosThatShouldPlay.add(video);
   ensureUnlockListener();
 
-  const tryPlay = () => video.play().catch(() => {});
+  const tryPlay = () => playNow(video);
   tryPlay();
-  video.addEventListener("loadedmetadata", tryPlay, { once: true });
-  video.addEventListener("canplay", tryPlay, { once: true });
+  RESUME_EVENTS.forEach((event) => video.addEventListener(event, tryPlay));
 }
 
 let lazyObserver: IntersectionObserver | null = null;
@@ -79,8 +127,8 @@ function getLazyObserver() {
         const video = entry.target as HTMLVideoElement;
         if (entry.isIntersecting) {
           videosThatShouldPlay.add(video);
-          video.muted = true;
-          video.play().catch(() => {});
+          playNow(video);
+          scheduleRetries();
         } else {
           videosThatShouldPlay.delete(video);
           video.pause();
@@ -98,7 +146,7 @@ function getLazyObserver() {
 // video on the page" down to just what's actually visible.
 export function lazyAutoplayVideoRef(video: HTMLVideoElement | null) {
   if (!video) return;
-  video.muted = true;
+  prepareBackgroundVideo(video);
   ensureUnlockListener();
   getLazyObserver()?.observe(video);
 }

@@ -45,6 +45,10 @@ function prepareBackgroundVideo(video: HTMLVideoElement) {
 
 function playNow(video: HTMLVideoElement) {
   video.muted = true;
+  // A browser that refused to preload (iOS Low Data Mode does exactly this) leaves the
+  // element with nothing buffered, and play() on an empty element just fails again.
+  // Kicking off load() first gives it something to actually play.
+  if (video.readyState === 0 && video.networkState !== 2) video.load();
   video.play().catch(() => {});
 }
 

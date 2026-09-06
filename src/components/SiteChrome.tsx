@@ -421,7 +421,33 @@ export function useCinematicScroll() {
       wheelMultiplier: 0.9
     });
 
-    const update = (time: number) => lenis.raf(time * 1000);
+    // Scroll velocity, published as a CSS variable for anything that wants to lean into
+    // the movement. One number written per frame drives the whole effect: the elements
+    // that use it do so through transform, which the compositor handles on its own
+    // without the layout ever being recalculated.
+    const root = document.documentElement;
+    const calmer = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const MAX_SKEW = 2.4;
+    let skew = 0;
+    let published = 0;
+
+    const update = (time: number) => {
+      lenis.raf(time * 1000);
+      if (calmer.matches) return;
+
+      const target = gsap.utils.clamp(-MAX_SKEW, MAX_SKEW, lenis.velocity * 0.08);
+      // Eased toward the target rather than set outright, so stopping a fast scroll
+      // settles back upright instead of snapping.
+      skew += (target - skew) * 0.12;
+
+      if (Math.abs(skew - published) > 0.01) {
+        published = skew;
+        root.style.setProperty("--scroll-skew", `${skew.toFixed(2)}deg`);
+        // Same eased value, expressed as a distance, for things that slide rather than
+        // lean — it costs one more property write and keeps every reaction in step.
+        root.style.setProperty("--scroll-drag", `${(skew * 16).toFixed(1)}px`);
+      }
+    };
 
     gsap.ticker.add(update);
     gsap.ticker.lagSmoothing(0);
@@ -429,6 +455,8 @@ export function useCinematicScroll() {
 
     return () => {
       gsap.ticker.remove(update);
+      root.style.removeProperty("--scroll-skew");
+      root.style.removeProperty("--scroll-drag");
       lenis.destroy();
     };
   }, []);
@@ -966,6 +994,44 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
       const distance = track.scrollWidth - window.innerWidth;
       if (distance <= 0) return;
 
+      // On a touch screen there is no pointer to hover a panel with, so the strip stayed
+      // uniformly dimmed the whole way through. Instead the panel nearest the middle of
+      // the screen lights itself up as the strip travels past.
+      const panels = gsap.utils.toArray<HTMLElement>(".filmstrip-panel", section);
+      const byTouch = window.matchMedia("(hover: none)").matches;
+      let centers: number[] = [];
+      let lit = -1;
+
+      // Measured once per refresh rather than per frame: reading an element's box forces
+      // the browser to settle the layout, and doing that for every panel on every frame
+      // of a pinned scroll is exactly the kind of thing that makes a phone stutter.
+      const measure = () => {
+        centers = panels.map((panel) => panel.offsetLeft + panel.offsetWidth / 2);
+      };
+
+      const lightNearest = () => {
+        if (!byTouch || !centers.length) return;
+        const travelled = (gsap.getProperty(track, "x") as number) ?? 0;
+        const middle = window.innerWidth / 2 - travelled;
+
+        let nearest = 0;
+        let shortest = Infinity;
+        centers.forEach((center, index) => {
+          const gap = Math.abs(center - middle);
+          if (gap < shortest) {
+            shortest = gap;
+            nearest = index;
+          }
+        });
+
+        if (nearest === lit) return;
+        panels[lit]?.classList.remove("filmstrip-panel--lit");
+        panels[nearest]?.classList.add("filmstrip-panel--lit");
+        lit = nearest;
+      };
+
+      measure();
+
       gsap.to(track, {
         x: -distance,
         ease: "none",
@@ -975,7 +1041,9 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
           end: () => `+=${distance}`,
           scrub: 0.6,
           pin: true,
-          invalidateOnRefresh: true
+          invalidateOnRefresh: true,
+          onRefresh: measure,
+          onUpdate: lightNearest
         }
       });
     });
@@ -1043,10 +1111,14 @@ export function Clients() {
 
   return (
     <section className="clients" aria-label="Marcas que ja confiaram no trabalho">
-      <div className="clients__track">
-        {loopBrands.map((brand, index) => (
-          <ClientLogo key={`${brand.name}-${index}`} {...brand} />
-        ))}
+      {/* The track's own transform runs the endless loop, so the scroll reaction rides on
+          a wrapper instead of fighting it for the same property. */}
+      <div className="clients__viewport">
+        <div className="clients__track">
+          {loopBrands.map((brand, index) => (
+            <ClientLogo key={`${brand.name}-${index}`} {...brand} />
+          ))}
+        </div>
       </div>
     </section>
   );

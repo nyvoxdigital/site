@@ -410,6 +410,10 @@ main {
   background: linear-gradient(270deg, #050505, transparent);
 }
 
+.clients__viewport {
+  transform: translate3d(var(--scroll-drag, 0px), 0, 0);
+}
+
 .clients__track {
   display: flex;
   align-items: center;
@@ -430,6 +434,10 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .clients__track {
     animation: none;
+  }
+
+  .clients__viewport {
+    transform: none;
   }
 }
 
@@ -522,16 +530,26 @@ main {
   height: 100%;
   object-fit: cover;
   filter: brightness(0.72) saturate(0.9);
+  /* Leans with the scroll (see --scroll-skew). The slight scale is what makes it safe:
+     a skewed rectangle no longer covers its own corners, and the extra 6% is the margin
+     that keeps the panel's edges filled instead of showing slivers of background. */
+  transform: scale(1.06) skewY(var(--scroll-skew, 0deg));
   transition: filter 400ms ease;
 }
 
-.filmstrip-panel--active video {
+.filmstrip-panel--active video,
+.filmstrip-panel--lit video {
   filter: brightness(0.98) saturate(1.05);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .filmstrip-panel {
     transition: none;
+  }
+
+  .filmstrip-panel video,
+  .video-tile video {
+    transform: none;
   }
 }
 
@@ -862,6 +880,10 @@ main {
 
 .video-tile:hover video {
   filter: brightness(0.92) saturate(1);
+}
+
+.video-tile video {
+  transform: scale(1.06) skewY(var(--scroll-skew, 0deg));
 }
 
 .video-tile__index {

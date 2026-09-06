@@ -955,13 +955,18 @@ main {
     margin: 1.5rem -1rem 0;
   }
 
+  /* The strip is pinned to the top of the screen while it scrolls sideways, so a panel
+     shorter than the viewport leaves the rest of the screen showing nothing but the
+     section's background. Full height fills it. svh rather than vh so the panels do not
+     jump when a mobile browser hides its address bar. The width grows with the height:
+     panels crop to fill, and a tall narrow box would show only a sliver of each clip. */
   .filmstrip-panel {
-    width: clamp(8rem, 42vw, 11rem);
-    height: clamp(14rem, 48vh, 20rem);
+    width: clamp(14rem, 66vw, 20rem);
+    height: 100svh;
   }
 
   .filmstrip-panel--active {
-    width: clamp(14rem, 68vw, 18rem);
+    width: clamp(16rem, 80vw, 24rem);
   }
 
   .hire__copy {

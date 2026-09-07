@@ -979,12 +979,17 @@ main {
 
   /* The strip is pinned to the top of the screen while it scrolls sideways, so a panel
      shorter than the viewport leaves the rest of the screen showing nothing but the
-     section's background. Full height fills it. svh rather than vh so the panels do not
-     jump when a mobile browser hides its address bar. The width grows with the height:
+     section's background. Full height fills it. lvh, not svh: a mobile browser hides its
+     address bar as you scroll down and the viewport grows, and a panel measured against
+     the smaller state would leave a band of background at the bottom, appearing and
+     disappearing as the bar comes and goes. Measuring against the taller state means the
+     panel is cropped a little while the bar is visible, which nobody notices, instead of
+     falling short exactly when someone is scrolling. The width grows with the height:
      panels crop to fill, and a tall narrow box would show only a sliver of each clip. */
   .filmstrip-panel {
     width: clamp(14rem, 66vw, 20rem);
-    height: 100svh;
+    height: 100vh;
+    height: 100lvh;
   }
 
   .filmstrip-panel--active {

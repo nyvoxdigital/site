@@ -1032,13 +1032,19 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
 
       measure();
 
+      // How far the page scrolls while the strip is held in place. Untying it from the
+      // travel distance is what keeps a long strip from feeling stuck: on a phone the
+      // panels are wide, so matching the two would pin the screen for some four
+      // screenfuls of scrolling. The strip simply moves faster per pixel scrolled.
+      const holdFor = byTouch ? distance * 0.6 : distance;
+
       gsap.to(track, {
         x: -distance,
         ease: "none",
         scrollTrigger: {
           trigger: section,
           start: "top top",
-          end: () => `+=${distance}`,
+          end: () => `+=${holdFor}`,
           scrub: 0.6,
           pin: true,
           invalidateOnRefresh: true,

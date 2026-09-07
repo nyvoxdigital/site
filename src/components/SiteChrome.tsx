@@ -850,7 +850,7 @@ export function Stats() {
   );
 }
 
-export function SiteHeader({ setCursor, setPreview }: { setCursor: (mode: CursorMode) => void; setPreview?: (src: string | null) => void }) {
+export function SiteHeader({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   const [solid, setSolid] = useState(false);
 
   useEffect(() => {
@@ -872,28 +872,6 @@ export function SiteHeader({ setCursor, setPreview }: { setCursor: (mode: Cursor
           <Scramble>Studio Motion</Scramble>
         </Link>
       </Magnetic>
-      <nav aria-label="Navegacao principal">
-        <Magnetic>
-          <Link
-            href="/#portfolio"
-            onMouseEnter={() => {
-              setCursor("preview");
-              setPreview?.("/videos/alecgol-gillette-2-poster.jpg");
-            }}
-            onMouseLeave={() => {
-              setCursor("default");
-              setPreview?.(null);
-            }}
-          >
-            <Scramble>Trabalhos</Scramble>
-          </Link>
-        </Magnetic>
-        <Magnetic>
-          <Link href="/#contrate" onMouseEnter={() => setCursor("link")} onMouseLeave={() => setCursor("default")}>
-            <Scramble>Orçamento</Scramble>
-          </Link>
-        </Magnetic>
-      </nav>
     </header>
   );
 }

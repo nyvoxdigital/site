@@ -138,7 +138,6 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
 
 export default function Home() {
   const [cursor, setCursor] = useState<CursorMode>("default");
-  const [preview, setPreview] = useState<string | null>(null);
 
   useCinematicScroll();
   useTextReveal();
@@ -168,8 +167,8 @@ export default function Home() {
 
   return (
     <main>
-      <Cursor mode={cursor} previewSrc={preview} />
-      <SiteHeader setCursor={setCursor} setPreview={setPreview} />
+      <Cursor mode={cursor} />
+      <SiteHeader setCursor={setCursor} />
       <Hero />
       <Clients />
       <Stats />

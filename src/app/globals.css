@@ -59,7 +59,7 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: clamp(1rem, 2.5vw, 2rem) clamp(1rem, 4vw, 4rem);
+  padding: clamp(0.55rem, 1.2vw, 0.9rem) clamp(1rem, 4vw, 4rem);
   color: var(--ink);
   background: linear-gradient(180deg, rgba(5, 5, 5, 0.55), rgba(5, 5, 5, 0));
   border-bottom: 1px solid transparent;
@@ -80,14 +80,6 @@ main {
 .site-header__brand {
   font-size: clamp(0.88rem, 1vw, 1.05rem);
   font-weight: 800;
-  text-transform: uppercase;
-}
-
-.site-header nav {
-  display: flex;
-  gap: clamp(0.9rem, 2vw, 2rem);
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
@@ -928,13 +920,7 @@ main {
   }
 
   .site-header {
-    padding: 1rem;
-  }
-
-  .site-header nav {
-    gap: 0.8rem;
-    font-size: 0.62rem;
-    letter-spacing: 0.1em;
+    padding: 0.55rem 1rem;
   }
 
   .site-header__brand {

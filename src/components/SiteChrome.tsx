@@ -169,8 +169,6 @@ export function BackgroundVideo({
     if (!context) return;
 
     let disposed = false;
-    let rafHandle = 0;
-    let frameHandle = 0;
 
     // The backing store follows the element's box but is capped: this is a dimmed,
     // full-bleed background, so a phone's full 3x pixel ratio would cost real battery
@@ -211,28 +209,34 @@ export function BackgroundVideo({
 
     };
 
-    // requestVideoFrameCallback fires once per decoded frame, so it neither drops frames
-    // nor burns a repaint on a paused video. rAF is the fallback where it is missing.
-    const hasFrameCallback = typeof video.requestVideoFrameCallback === "function";
+    // The canvas exists to deny iOS a video to draw its play button on, and iOS only
+    // draws that button on a video it is refusing to play. A video that IS playing needs
+    // no cover — so it is shown directly and the canvas steps aside, which is what keeps
+    // this from costing a full-screen repaint per frame on every browser that never had
+    // the problem. The canvas starts covering, because that is the state before the first
+    // play() attempt has been answered.
+    let covering = true;
 
-    const loop = () => {
-      if (disposed) return;
-      paint();
-      if (hasFrameCallback) {
-        frameHandle = video.requestVideoFrameCallback(loop);
-      } else {
-        rafHandle = requestAnimationFrame(loop);
-      }
+    const cover = (shouldCover: boolean) => {
+      if (shouldCover === covering) return;
+      covering = shouldCover;
+      // Painted before being revealed, so it never appears holding a stale frame.
+      if (shouldCover) paint();
+      canvas.dataset.idle = shouldCover ? "false" : "true";
     };
-
-    loop();
 
     // A paused video still has a frame to show; these are the moments it becomes
     // available, or the canvas box changes and the old frame no longer fits.
-    const repaintEvents = ["loadeddata", "canplay", "seeked", "play", "playing"];
-    repaintEvents.forEach((event) => video.addEventListener(event, paint));
-    window.addEventListener("resize", paint);
-    window.addEventListener("orientationchange", paint);
+    const repaintEvents = ["loadeddata", "canplay", "seeked"];
+    const repaint = () => {
+      if (covering) paint();
+    };
+    repaintEvents.forEach((event) => video.addEventListener(event, repaint));
+    window.addEventListener("resize", repaint);
+    window.addEventListener("orientationchange", repaint);
+    // A cached video may already have fired loadeddata before this effect ran, in which
+    // case no event is coming and the canvas would sit on its background colour.
+    repaint();
 
     // ---- Fallback for platforms that refuse play() outright ----
     // iOS in Low Power Mode rejects play() with NotAllowedError even for a muted inline
@@ -298,6 +302,8 @@ export function BackgroundVideo({
         onScreen &&
         document.visibilityState === "visible";
 
+      cover(video.paused);
+
       if (!shouldSeek) {
         stopSeekFallback();
         return;
@@ -345,13 +351,9 @@ export function BackgroundVideo({
       video.removeEventListener("pause", reconcile);
       document.removeEventListener("visibilitychange", reconcile);
       releaseAutoplayVideo(video);
-      if (rafHandle) cancelAnimationFrame(rafHandle);
-      if (frameHandle && typeof video.cancelVideoFrameCallback === "function") {
-        video.cancelVideoFrameCallback(frameHandle);
-      }
-      repaintEvents.forEach((event) => video.removeEventListener(event, paint));
-      window.removeEventListener("resize", paint);
-      window.removeEventListener("orientationchange", paint);
+      repaintEvents.forEach((event) => video.removeEventListener(event, repaint));
+      window.removeEventListener("resize", repaint);
+      window.removeEventListener("orientationchange", repaint);
     };
   }, []);
 
@@ -365,6 +367,7 @@ export function BackgroundVideo({
           videoRef.current = node;
           autoplayVideoRef(node);
         }}
+        data-parallax={parallax}
         autoPlay
         muted
         loop
@@ -372,6 +375,7 @@ export function BackgroundVideo({
         preload="auto"
       />
       <canvas className={`${block}__canvas`} ref={canvasRef} data-parallax={parallax} aria-hidden />
+      {/* Both layers parallax: either one can be the visible one. */}
     </>
   );
 }

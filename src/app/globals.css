@@ -214,6 +214,12 @@ main {
    the seconds a video spends buffering are exactly when iOS draws its play button over
    it. Until the first frame arrives it shows the page's own background, so the hero
    darkens into place instead of flashing a control nobody asked for. */
+/* Stepped aside while the video plays on its own — see BackgroundVideo. */
+.hero__canvas[data-idle="true"],
+.project-hero__canvas[data-idle="true"] {
+  opacity: 0;
+}
+
 .hero__canvas,
 .project-hero__canvas {
   position: absolute;

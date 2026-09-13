@@ -12,7 +12,6 @@
 }
 
 .hero h1,
-.project-hero h1,
 .section-heading h2,
 .hire__copy h2,
 .contact h2,
@@ -156,8 +155,7 @@ main {
     linear-gradient(90deg, rgba(5, 5, 5, 0.74), rgba(5, 5, 5, 0.1) 62%);
 }
 
-.hero__video,
-.project-hero__video {
+.hero__video {
   position: absolute;
   inset: 0;
   z-index: -4;
@@ -173,13 +171,11 @@ main {
    it. Until the first frame arrives it shows the page's own background, so the hero
    darkens into place instead of flashing a control nobody asked for. */
 /* Stepped aside while the video plays on its own — see BackgroundVideo. */
-.hero__canvas[data-idle="true"],
-.project-hero__canvas[data-idle="true"] {
+.hero__canvas[data-idle="true"] {
   opacity: 0;
 }
 
-.hero__canvas,
-.project-hero__canvas {
+.hero__canvas {
   position: absolute;
   inset: 0;
   z-index: -3;
@@ -193,15 +189,12 @@ main {
 /* Background videos are decorative: they must never take a tap and never show native
    controls. iOS in particular draws a big "start playback" button over any video it
    decides the user has to start by hand, which is what we hide here. */
-.hero__video,
-.project-hero__video {
+.hero__video {
   pointer-events: none;
 }
 
 .hero__video::-webkit-media-controls,
-.project-hero__video::-webkit-media-controls,
-.filmstrip-panel video::-webkit-media-controls,
-.video-tile video::-webkit-media-controls {
+.filmstrip-panel video::-webkit-media-controls {
   display: none !important;
   opacity: 0;
   -webkit-appearance: none;
@@ -209,9 +202,7 @@ main {
 }
 
 .hero__video::-webkit-media-controls-panel,
-.project-hero__video::-webkit-media-controls-panel,
-.filmstrip-panel video::-webkit-media-controls-panel,
-.video-tile video::-webkit-media-controls-panel {
+.filmstrip-panel video::-webkit-media-controls-panel {
   display: none !important;
   opacity: 0;
   -webkit-appearance: none;
@@ -219,9 +210,7 @@ main {
 }
 
 .hero__video::-webkit-media-controls-start-playback-button,
-.project-hero__video::-webkit-media-controls-start-playback-button,
-.filmstrip-panel video::-webkit-media-controls-start-playback-button,
-.video-tile video::-webkit-media-controls-start-playback-button {
+.filmstrip-panel video::-webkit-media-controls-start-playback-button {
   display: none !important;
   opacity: 0;
   -webkit-appearance: none;
@@ -229,9 +218,7 @@ main {
 }
 
 .hero__video::-webkit-media-controls-play-button,
-.project-hero__video::-webkit-media-controls-play-button,
-.filmstrip-panel video::-webkit-media-controls-play-button,
-.video-tile video::-webkit-media-controls-play-button {
+.filmstrip-panel video::-webkit-media-controls-play-button {
   display: none !important;
   opacity: 0;
   -webkit-appearance: none;
@@ -239,9 +226,7 @@ main {
 }
 
 .hero__video::-webkit-media-controls-overlay-play-button,
-.project-hero__video::-webkit-media-controls-overlay-play-button,
-.filmstrip-panel video::-webkit-media-controls-overlay-play-button,
-.video-tile video::-webkit-media-controls-overlay-play-button {
+.filmstrip-panel video::-webkit-media-controls-overlay-play-button {
   display: none !important;
   opacity: 0;
   -webkit-appearance: none;
@@ -280,16 +265,6 @@ main {
   line-height: 0.92;
   letter-spacing: 0;
   text-transform: uppercase;
-}
-
-.page-transition {
-  position: fixed;
-  inset: 0;
-  z-index: 4000;
-  background: #050505;
-  transform: scaleY(0);
-  transform-origin: top;
-  pointer-events: none;
 }
 
 .sr-only {
@@ -534,8 +509,7 @@ main {
     transition: none;
   }
 
-  .filmstrip-panel video,
-  .video-tile video {
+  .filmstrip-panel video {
     transform: none;
   }
 }
@@ -797,100 +771,6 @@ main {
   font-size: clamp(0.95rem, 1.2vw, 1.2rem);
 }
 
-.project-hero {
-  position: relative;
-  min-height: 90svh;
-  display: grid;
-  align-items: end;
-  padding: clamp(5rem, 8vw, 7rem) clamp(1rem, 5vw, 5rem) clamp(2.5rem, 6vw, 5rem);
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.project-hero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    linear-gradient(180deg, rgba(5, 5, 5, 0.16), rgba(5, 5, 5, 0.86)),
-    linear-gradient(90deg, rgba(5, 5, 5, 0.74), rgba(5, 5, 5, 0.1) 62%);
-}
-
-
-.project-hero__copy {
-  max-width: 60rem;
-}
-
-.project-hero h1 {
-  margin: 0.8rem 0 0;
-  font-size: clamp(2.6rem, 6.8vw, 6.4rem);
-  font-weight: 900;
-  line-height: var(--display-lh);
-  text-transform: uppercase;
-}
-
-.project-about,
-.project-videos {
-  padding: clamp(4.5rem, 8vw, 8rem) clamp(1rem, 5vw, 5rem);
-  border-top: 1px solid var(--line);
-}
-
-.project-about {
-  background: #080807;
-}
-
-.project-videos {
-  background: #080807;
-}
-
-.project-about__text {
-  max-width: 52rem;
-  margin: 0 0 0 auto;
-  color: var(--muted);
-  font-size: clamp(1rem, 1.4vw, 1.3rem);
-  line-height: 1.55;
-}
-
-.video-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(1rem, 2vw, 1.8rem);
-  align-items: start;
-}
-
-.video-tile {
-  position: relative;
-  background: var(--panel);
-  border: 1px solid var(--line);
-}
-
-.video-tile video {
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: brightness(0.78) saturate(0.9);
-  transition: filter 700ms ease;
-}
-
-.video-tile:hover video {
-  filter: brightness(0.92) saturate(1);
-}
-
-.video-tile video {
-  transform: scale(1.06) skewY(var(--scroll-skew, 0deg));
-}
-
-.video-tile__index {
-  position: absolute;
-  left: clamp(0.9rem, 1.6vw, 1.4rem);
-  bottom: clamp(0.9rem, 1.6vw, 1.4rem);
-  z-index: 1;
-  color: var(--ink);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-}
 
 @media (max-width: 900px) {
   html,
@@ -912,29 +792,10 @@ main {
     font-size: clamp(2.6rem, 11vw, 4.4rem);
   }
 
-  .project-hero {
-    min-height: 82svh;
-    padding: 5rem 1rem 2rem;
-  }
-
-  .project-hero h1 {
-    font-size: clamp(2.4rem, 11vw, 3.8rem);
-  }
-
   .portfolio,
   .hire,
-  .contact,
-  .project-about,
-  .project-videos {
+  .contact {
     padding: 4rem 1rem;
-  }
-
-  .project-about__text {
-    margin: 0;
-  }
-
-  .video-grid {
-    grid-template-columns: 1fr;
   }
 
   .section-heading {

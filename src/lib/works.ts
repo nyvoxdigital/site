@@ -155,10 +155,6 @@ export const projects: Project[] = [
   }
 ];
 
-export function getProjectBySlug(slug: string) {
-  return projects.find((project) => project.slug === slug);
-}
-
 const R2_BASE_URL = "https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev";
 
 // Placeholder while real per-project footage gets uploaded to R2 one by

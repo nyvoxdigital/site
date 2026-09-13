@@ -3,12 +3,10 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
-import { usePathname } from "next/navigation";
 import {
   cloneElement,
   isValidElement,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
   type ReactElement,
@@ -380,42 +378,6 @@ export function BackgroundVideo({
   );
 }
 
-let lazyObserver: IntersectionObserver | null = null;
-
-function getLazyObserver() {
-  if (lazyObserver || typeof window === "undefined" || typeof IntersectionObserver === "undefined") {
-    return lazyObserver;
-  }
-  lazyObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        const video = entry.target as HTMLVideoElement;
-        if (entry.isIntersecting) {
-          videosThatShouldPlay.add(video);
-          playNow(video);
-          scheduleRetries();
-        } else {
-          videosThatShouldPlay.delete(video);
-          video.pause();
-        }
-      });
-    },
-    { rootMargin: "200px 0px" }
-  );
-  return lazyObserver;
-}
-
-// For videos further down the page (portfolio cards, project video sections): don't fetch
-// or play anything until the card is about to scroll into view, and pause again once it
-// scrolls back out. Cuts the amount of video data downloaded on page load from "every
-// video on the page" down to just what's actually visible.
-export function lazyAutoplayVideoRef(video: HTMLVideoElement | null) {
-  if (!video) return;
-  prepareBackgroundVideo(video);
-  ensureUnlockListener();
-  getLazyObserver()?.observe(video);
-}
-
 export function useCinematicScroll() {
   useEffect(() => {
     const lenis = new Lenis({
@@ -687,27 +649,6 @@ export function Scramble({ children }: { children: string }) {
 // Persistent black overlay that lives in the root layout (never unmounts
 // between route changes) and wipes away on every pathname change, giving
 // project/home navigation a cut transition instead of an instant swap.
-export function PageTransition() {
-  const pathname = usePathname();
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const firstRender = useRef(true);
-
-  useLayoutEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false;
-      return;
-    }
-
-    const el = overlayRef.current;
-    if (!el) return;
-
-    gsap.set(el, { scaleY: 1 });
-    gsap.to(el, { scaleY: 0, duration: 0.6, ease: "power3.inOut" });
-  }, [pathname]);
-
-  return <div ref={overlayRef} className="page-transition" aria-hidden="true" />;
-}
-
 // Splits a line of text into words, each masked inside an overflow-hidden
 // span so useTextReveal can slide it up into view. Call once per visual
 // line (existing <br /> line breaks in headings stay put around it).

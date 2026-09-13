@@ -9,7 +9,6 @@ import {
   Cursor,
   CursorMode,
   lazyAutoplayVideoRef,
-  SiteHeader,
   SplitText,
   useCinematicScroll,
   useParallax,
@@ -119,7 +118,6 @@ export default function ProjectView({ project }: { project: Project }) {
   return (
     <main>
       <Cursor mode={cursor} />
-      <SiteHeader setCursor={setCursor} />
       <ProjectHero project={project} />
       <ProjectAbout project={project} />
       <ProjectVideos project={project} setCursor={setCursor} />

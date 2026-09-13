@@ -10,7 +10,7 @@ const displayFont = Unbounded({
 });
 
 export const metadata: Metadata = {
-  title: "Studio Motion | Filmes e campanhas",
+  title: "Murilo Gonçalves | Filmes e campanhas",
   description: "Produção de vídeo para marcas: filmes, campanhas e conteúdo."
 };
 

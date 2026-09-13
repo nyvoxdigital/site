@@ -3,7 +3,6 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   cloneElement,
@@ -851,38 +850,18 @@ export function Stats() {
   );
 }
 
-export function SiteHeader({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
-  const [solid, setSolid] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setSolid(window.scrollY > 40);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return (
-    <header className={`site-header${solid ? " site-header--solid" : ""}`}>
-      <Magnetic>
-        <Link
-          href="/"
-          className="site-header__brand"
-          onMouseEnter={() => setCursor("link")}
-          onMouseLeave={() => setCursor("default")}
-        >
-          <Scramble>Studio Motion</Scramble>
-        </Link>
-      </Magnetic>
-    </header>
-  );
-}
-
 // The strip advances sideways on its own, forever — the projects array is duplicated so
 // the loop can wrap without ever running out of content, the same trick used by the
 // Clients marquee. A drag (mouse press-and-hold, or a touch swipe) takes over the
 // position directly and hands it back to autoplay on release, with a short glide instead
 // of an abrupt stop. There is no scroll-jacking of any kind: the page always scrolls
 // normally, and this section's own height is just whatever the panels need.
+// A tap has moved less than this and still counts as a tap rather than a swipe. Must not
+// exceed the track's own drag threshold (see Filmstrip below): if it did, a movement the
+// carousel treats as a drag could also register here as a tap, growing a panel while the
+// whole strip is being dragged past it.
+const TAP_TOLERANCE_PX = 8;
+
 function FilmstripPanel({
   project,
   setCursor,
@@ -895,55 +874,60 @@ function FilmstripPanel({
   onDeactivate: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const linkRef = useRef<HTMLAnchorElement>(null);
-  const tiltX = useRef<ReturnType<typeof gsap.quickTo> | null>(null);
-  const tiltY = useRef<ReturnType<typeof gsap.quickTo> | null>(null);
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const [active, setActive] = useState(false);
 
-  useEffect(() => {
-    const el = linkRef.current;
-    if (!el) return;
-    gsap.set(el, { transformPerspective: 800 });
-    tiltX.current = gsap.quickTo(el, "rotationX", { duration: 0.5, ease: "power3.out" });
-    tiltY.current = gsap.quickTo(el, "rotationY", { duration: 0.5, ease: "power3.out" });
-  }, []);
-
-  const activate = () => {
+  const grow = () => {
     setActive(true);
     setCursor("play");
     onActivate();
     videoRef.current?.play().catch(() => {});
   };
 
-  // 3D tilt: rotates the card toward the pointer's position within it,
-  // like it's tipping in your hand — reset back to flat on leave below.
-  const tilt = (event: React.PointerEvent<HTMLAnchorElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const relX = (event.clientX - rect.left) / rect.width - 0.5;
-    const relY = (event.clientY - rect.top) / rect.height - 0.5;
-    tiltY.current?.(relX * 16);
-    tiltX.current?.(relY * -16);
-  };
-
-  const deactivate = () => {
+  const shrink = () => {
     setActive(false);
     setCursor("default");
     onDeactivate();
     videoRef.current?.pause();
-    tiltX.current?.(0);
-    tiltY.current?.(0);
+  };
+
+  // Gated to a real mouse: a touchscreen fires this same enter/leave pair around a tap,
+  // which would otherwise flash the panel bigger and then immediately shrink it back
+  // before the tap handler below ever gets a say.
+  const onPointerEnter = (event: React.PointerEvent) => {
+    if (event.pointerType === "mouse") grow();
+  };
+
+  const onPointerLeave = (event: React.PointerEvent) => {
+    if (event.pointerType === "mouse") shrink();
+  };
+
+  const onPointerDown = (event: React.PointerEvent) => {
+    pointerStart.current = { x: event.clientX, y: event.clientY };
+  };
+
+  // Touch and pen: there is nowhere left to navigate to, so a genuine tap (not a swipe
+  // that dragged the strip) toggles the panel bigger instead — the same feature a mouse
+  // gets for free just by hovering.
+  const onPointerUp = (event: React.PointerEvent) => {
+    if (event.pointerType === "mouse") return;
+    const start = pointerStart.current;
+    pointerStart.current = null;
+    if (!start) return;
+    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > TAP_TOLERANCE_PX) return;
+    if (active) shrink();
+    else grow();
   };
 
   return (
-    <Link
-      ref={linkRef}
-      href={`/projetos/${project.slug}`}
+    <div
       className={`filmstrip-panel${active ? " filmstrip-panel--active" : ""}`}
-      onPointerEnter={activate}
-      onPointerMove={tilt}
-      onPointerLeave={deactivate}
+      role="button"
       tabIndex={0}
-      draggable={false}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
     >
       <video
         ref={videoRef}
@@ -954,7 +938,7 @@ function FilmstripPanel({
         playsInline
         preload="none"
       />
-    </Link>
+    </div>
   );
 }
 
@@ -983,7 +967,6 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
     const calmer = window.matchMedia("(prefers-reduced-motion: reduce)");
     const AUTOPLAY_PX_PER_MS = 0.045;
     const DRAG_THRESHOLD_PX = 8;
-    const CLICK_SUPPRESS_MS = 300;
 
     const panels = Array.from(track.children) as HTMLElement[];
     let singleWidth = 0;
@@ -1000,7 +983,6 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
     let startPosition = 0;
     let lastMoveTime = 0;
     let lastMoveX = 0;
-    let suppressClickUntil = 0;
     let lastFrameTime = 0;
     let onScreen = true;
     let raf = 0;
@@ -1137,27 +1119,15 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
 
     const endDrag = (event: PointerEvent) => {
       if (pointerId === null || event.pointerId !== pointerId) return;
-      if (dragging) {
-        // A drag that just ended must not also fire the link's click and navigate away.
-        suppressClickUntil = performance.now() + CLICK_SUPPRESS_MS;
-        track.classList.remove("filmstrip__track--dragging");
-      }
+      if (dragging) track.classList.remove("filmstrip__track--dragging");
       dragging = false;
       pointerId = null;
-    };
-
-    const onClickCapture = (event: MouseEvent) => {
-      if (performance.now() < suppressClickUntil) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
     };
 
     track.addEventListener("pointerdown", onPointerDown);
     track.addEventListener("pointermove", onPointerMove);
     track.addEventListener("pointerup", endDrag);
     track.addEventListener("pointercancel", endDrag);
-    track.addEventListener("click", onClickCapture, true);
 
     return () => {
       cancelAnimationFrame(raf);
@@ -1167,7 +1137,6 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
       track.removeEventListener("pointermove", onPointerMove);
       track.removeEventListener("pointerup", endDrag);
       track.removeEventListener("pointercancel", endDrag);
-      track.removeEventListener("click", onClickCapture, true);
     };
   }, [projects]);
 

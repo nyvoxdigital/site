@@ -13,7 +13,6 @@ import {
   Filmstrip,
   Magnetic,
   Scramble,
-  SiteHeader,
   SplitText,
   Stats,
   useCinematicScroll,
@@ -168,7 +167,6 @@ export default function Home() {
   return (
     <main>
       <Cursor mode={cursor} />
-      <SiteHeader setCursor={setCursor} />
       <Hero />
       <Clients />
       <Stats />

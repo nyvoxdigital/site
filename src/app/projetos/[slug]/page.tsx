@@ -22,7 +22,7 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${project.title} | Studio Motion`,
+    title: `${project.title} | Murilo Gonçalves`,
     description: project.about
   };
 }

@@ -502,12 +502,22 @@ main {
   display: flex;
   width: max-content;
   gap: 2px;
+  cursor: grab;
+  /* This axis is driven entirely by JS (autoplay + drag) — telling the browser it owns
+     vertical panning here keeps a touch swipe from fighting page scroll while the two are
+     still undecided about which direction the gesture is going. */
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
   will-change: transform;
 }
 
-/* The strip is pinned to the top of the screen while it scrolls sideways, so a panel
-   shorter than the viewport leaves the rest of the screen showing nothing but the
-   section's background instead of the work. Full height fills it.
+.filmstrip__track--dragging {
+  cursor: grabbing;
+}
+
+/* Full height so a panel this wide never leaves the section showing its own background
+   above or below the video.
 
    lvh, not vh or svh: a mobile browser hides its address bar as you scroll down and the
    viewport grows, and a panel measured against the smaller state would leave a band of
@@ -520,7 +530,7 @@ main {
 .filmstrip-panel {
   position: relative;
   flex: 0 0 auto;
-  width: clamp(16rem, 22vw, 26rem);
+  width: clamp(22rem, 32vw, 40rem);
   height: 100vh;
   height: 100lvh;
   overflow: hidden;
@@ -530,7 +540,7 @@ main {
 }
 
 .filmstrip-panel--active {
-  width: clamp(24rem, 34vw, 38rem);
+  width: clamp(30rem, 42vw, 52rem);
   z-index: 1;
 }
 
@@ -795,6 +805,14 @@ main {
   text-transform: uppercase;
 }
 
+.contact__person {
+  margin: 1.2rem 0 0;
+  color: var(--muted);
+  font-size: clamp(0.85rem, 1vw, 1rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .contact nav {
   display: grid;
   gap: 0.45rem;
@@ -983,11 +1001,11 @@ main {
   }
 
   .filmstrip-panel {
-    width: clamp(14rem, 66vw, 20rem);
+    width: clamp(20rem, 84vw, 28rem);
   }
 
   .filmstrip-panel--active {
-    width: clamp(16rem, 80vw, 24rem);
+    width: clamp(22rem, 92vw, 30rem);
   }
 
   .hire__copy {

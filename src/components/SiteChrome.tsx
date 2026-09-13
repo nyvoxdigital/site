@@ -16,7 +16,8 @@ import {
   type ReactNode,
   type Ref
 } from "react";
-import { FiArrowUpRight, FiMail } from "react-icons/fi";
+import { FiArrowUpRight } from "react-icons/fi";
+import { FaInstagram, FaWhatsapp } from "react-icons/fa";
 import { posterSrc, videoSrc, type Project } from "@/lib/works";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -876,6 +877,12 @@ export function SiteHeader({ setCursor }: { setCursor: (mode: CursorMode) => voi
   );
 }
 
+// The strip advances sideways on its own, forever — the projects array is duplicated so
+// the loop can wrap without ever running out of content, the same trick used by the
+// Clients marquee. A drag (mouse press-and-hold, or a touch swipe) takes over the
+// position directly and hands it back to autoplay on release, with a short glide instead
+// of an abrupt stop. There is no scroll-jacking of any kind: the page always scrolls
+// normally, and this section's own height is just whatever the panels need.
 function FilmstripPanel({
   project,
   setCursor,
@@ -936,6 +943,7 @@ function FilmstripPanel({
       onPointerMove={tilt}
       onPointerLeave={deactivate}
       tabIndex={0}
+      draggable={false}
     >
       <video
         ref={videoRef}
@@ -950,10 +958,6 @@ function FilmstripPanel({
   );
 }
 
-// The whole section pins in place while the track scrolls sideways as the
-// user scrolls down — a horizontal-scroll section instead of stacking
-// downward, on every screen size (touch scroll drives it the same way a
-// mouse wheel does).
 export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCursor: (mode: CursorMode) => void }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -967,84 +971,212 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
     activeCount.current = Math.max(0, activeCount.current - 1);
   };
 
+  // Repeated twice so the wrap point (see wrap() below) always lands on identical content
+  // on both sides of the seam — the loop reads as endless instead of visibly restarting.
+  const loopProjects = [...projects, ...projects];
+
   useEffect(() => {
     const section = sectionRef.current;
     const track = trackRef.current;
     if (!section || !track) return;
 
-    const context = gsap.context(() => {
-      const distance = track.scrollWidth - window.innerWidth;
-      if (distance <= 0) return;
+    const calmer = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const AUTOPLAY_PX_PER_MS = 0.045;
+    const DRAG_THRESHOLD_PX = 8;
+    const CLICK_SUPPRESS_MS = 300;
 
-      // On a touch screen there is no pointer to hover a panel with, so the strip stayed
-      // uniformly dimmed the whole way through. Instead the panel nearest the middle of
-      // the screen lights itself up as the strip travels past.
-      const panels = gsap.utils.toArray<HTMLElement>(".filmstrip-panel", section);
-      const byTouch = window.matchMedia("(hover: none)").matches;
-      let centers: number[] = [];
-      let lit = -1;
+    const panels = Array.from(track.children) as HTMLElement[];
+    let singleWidth = 0;
+    let centers: number[] = [];
+    let lit = -1;
+    let position = 0;
+    let velocity = 0;
+    let dragging = false;
+    let pointerId: number | null = null;
+    let intentResolved = false;
+    let horizontalIntent = false;
+    let startX = 0;
+    let startY = 0;
+    let startPosition = 0;
+    let lastMoveTime = 0;
+    let lastMoveX = 0;
+    let suppressClickUntil = 0;
+    let lastFrameTime = 0;
+    let onScreen = true;
+    let raf = 0;
 
-      // Measured once per refresh rather than per frame: reading an element's box forces
-      // the browser to settle the layout, and doing that for every panel on every frame
-      // of a pinned scroll is exactly the kind of thing that makes a phone stutter.
-      const measure = () => {
-        centers = panels.map((panel) => panel.offsetLeft + panel.offsetWidth / 2);
-      };
+    // Read once on mount/resize rather than every frame: measuring an element's box
+    // forces the browser to settle layout, and doing that 60 times a second for a
+    // continuously running animation is exactly what makes a phone stutter.
+    const measure = () => {
+      singleWidth = track.scrollWidth / 2;
+      centers = panels.map((panel) => panel.offsetLeft + panel.offsetWidth / 2);
+    };
 
-      const lightNearest = () => {
-        if (!byTouch || !centers.length) return;
-        const travelled = (gsap.getProperty(track, "x") as number) ?? 0;
-        const middle = window.innerWidth / 2 - travelled;
+    // Keeps position inside (-singleWidth, 0] — past either edge, silently jump by one
+    // full repeat. Since the content past the jump is identical, nothing visibly moves.
+    const wrap = (value: number) => {
+      if (!singleWidth) return value;
+      let wrapped = value % singleWidth;
+      if (wrapped > 0) wrapped -= singleWidth;
+      return wrapped;
+    };
 
-        let nearest = 0;
-        let shortest = Infinity;
-        centers.forEach((center, index) => {
-          const gap = Math.abs(center - middle);
-          if (gap < shortest) {
-            shortest = gap;
-            nearest = index;
-          }
-        });
+    const apply = () => {
+      track.style.transform = `translate3d(${position}px, 0, 0)`;
+    };
 
-        if (nearest === lit) return;
-        panels[lit]?.classList.remove("filmstrip-panel--lit");
-        panels[nearest]?.classList.add("filmstrip-panel--lit");
-        lit = nearest;
-      };
-
-      measure();
-
-      // How far the page scrolls while the strip is held in place. Untying it from the
-      // travel distance is what keeps a long strip from feeling stuck: on a phone the
-      // panels are wide, so matching the two would pin the screen for some four
-      // screenfuls of scrolling. The strip simply moves faster per pixel scrolled.
-      const holdFor = byTouch ? distance * 0.6 : distance;
-
-      gsap.to(track, {
-        x: -distance,
-        ease: "none",
-        scrollTrigger: {
-          trigger: section,
-          start: "top top",
-          end: () => `+=${holdFor}`,
-          scrub: 0.6,
-          pin: true,
-          invalidateOnRefresh: true,
-          onRefresh: measure,
-          onUpdate: lightNearest
+    // With no hover on a touch screen, nothing would otherwise mark a "featured" panel
+    // the way desktop's mouse hover does. This picks whichever panel is nearest the
+    // middle of the screen as the strip drifts past, on every input type.
+    const lightNearest = () => {
+      if (!centers.length) return;
+      const middle = window.innerWidth / 2 - position;
+      let nearest = 0;
+      let shortest = Infinity;
+      centers.forEach((center, index) => {
+        const gap = Math.abs(center - middle);
+        if (gap < shortest) {
+          shortest = gap;
+          nearest = index;
         }
       });
-    });
+      if (nearest === lit) return;
+      panels[lit]?.classList.remove("filmstrip-panel--lit");
+      panels[nearest]?.classList.add("filmstrip-panel--lit");
+      lit = nearest;
+    };
 
-    return () => context.revert();
+    const loop = (time: number) => {
+      raf = requestAnimationFrame(loop);
+      if (!onScreen) {
+        lastFrameTime = time;
+        return;
+      }
+      const dt = lastFrameTime ? time - lastFrameTime : 0;
+      lastFrameTime = time;
+
+      if (!dragging) {
+        if (Math.abs(velocity) > 0.01) {
+          // A drag release keeps coasting at its own speed, decaying back to the
+          // autoplay pace instead of snapping straight to it.
+          position += velocity * dt;
+          velocity *= Math.pow(0.94, dt / 16.67);
+          if (Math.abs(velocity) < 0.01) velocity = 0;
+        } else if (!calmer.matches) {
+          position -= AUTOPLAY_PX_PER_MS * dt;
+        }
+        position = wrap(position);
+        apply();
+      }
+      lightNearest();
+    };
+
+    measure();
+    raf = requestAnimationFrame(loop);
+
+    const observer =
+      typeof IntersectionObserver === "undefined"
+        ? null
+        : new IntersectionObserver(
+            (entries) => {
+              onScreen = entries[entries.length - 1].isIntersecting;
+            },
+            { threshold: 0 }
+          );
+    observer?.observe(section);
+
+    const onResize = () => measure();
+    window.addEventListener("resize", onResize);
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      dragging = false;
+      intentResolved = false;
+      horizontalIntent = false;
+      pointerId = event.pointerId;
+      startX = event.clientX;
+      startY = event.clientY;
+      startPosition = position;
+      velocity = 0;
+      lastMoveTime = performance.now();
+      lastMoveX = event.clientX;
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (pointerId === null || event.pointerId !== pointerId) return;
+      const dx = event.clientX - startX;
+      const dy = event.clientY - startY;
+
+      if (!intentResolved) {
+        if (Math.abs(dx) < DRAG_THRESHOLD_PX && Math.abs(dy) < DRAG_THRESHOLD_PX) return;
+        intentResolved = true;
+        // Only a clearly horizontal swipe takes over — anything more vertical is left
+        // alone so the page keeps scrolling normally, exactly as if this were plain text.
+        horizontalIntent = Math.abs(dx) > Math.abs(dy);
+        if (horizontalIntent) {
+          dragging = true;
+          track.setPointerCapture(pointerId);
+          track.classList.add("filmstrip__track--dragging");
+        }
+      }
+
+      if (!horizontalIntent) return;
+
+      event.preventDefault();
+      position = wrap(startPosition + dx);
+      apply();
+      lightNearest();
+
+      const now = performance.now();
+      const elapsed = now - lastMoveTime;
+      if (elapsed > 0) velocity = (event.clientX - lastMoveX) / elapsed;
+      lastMoveTime = now;
+      lastMoveX = event.clientX;
+    };
+
+    const endDrag = (event: PointerEvent) => {
+      if (pointerId === null || event.pointerId !== pointerId) return;
+      if (dragging) {
+        // A drag that just ended must not also fire the link's click and navigate away.
+        suppressClickUntil = performance.now() + CLICK_SUPPRESS_MS;
+        track.classList.remove("filmstrip__track--dragging");
+      }
+      dragging = false;
+      pointerId = null;
+    };
+
+    const onClickCapture = (event: MouseEvent) => {
+      if (performance.now() < suppressClickUntil) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    track.addEventListener("pointerdown", onPointerDown);
+    track.addEventListener("pointermove", onPointerMove);
+    track.addEventListener("pointerup", endDrag);
+    track.addEventListener("pointercancel", endDrag);
+    track.addEventListener("click", onClickCapture, true);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      observer?.disconnect();
+      window.removeEventListener("resize", onResize);
+      track.removeEventListener("pointerdown", onPointerDown);
+      track.removeEventListener("pointermove", onPointerMove);
+      track.removeEventListener("pointerup", endDrag);
+      track.removeEventListener("pointercancel", endDrag);
+      track.removeEventListener("click", onClickCapture, true);
+    };
   }, [projects]);
 
   return (
     <div className="filmstrip" ref={sectionRef}>
       <div className="filmstrip__track" ref={trackRef}>
-        {projects.map((project) => (
+        {loopProjects.map((project, index) => (
           <FilmstripPanel
-            key={project.slug}
+            key={`${project.slug}-${index}`}
             project={project}
             setCursor={setCursor}
             onActivate={handleActivate}
@@ -1112,7 +1244,31 @@ export function Clients() {
   );
 }
 
+// Contact identity for the studio's direct line, in one place — update here if the
+// person, number, or handle behind the site ever changes.
+const CONTACT = {
+  name: "Murilo Gonçalves",
+  whatsappNumber: "5513997989477",
+  whatsappLabel: "(13) 99798-9477",
+  instagramHandle: "murilofilmsbr"
+};
+
 export function Contact({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
+  const links = [
+    {
+      key: "whatsapp",
+      label: CONTACT.whatsappLabel,
+      href: `https://wa.me/${CONTACT.whatsappNumber}`,
+      icon: <FaWhatsapp />
+    },
+    {
+      key: "instagram",
+      label: `@${CONTACT.instagramHandle}`,
+      href: `https://instagram.com/${CONTACT.instagramHandle}`,
+      icon: <FaInstagram />
+    }
+  ];
+
   return (
     <footer className="contact">
       <div>
@@ -1120,17 +1276,20 @@ export function Contact({ setCursor }: { setCursor: (mode: CursorMode) => void }
         <h2 className="reveal">
           <SplitText>Vamos criar algo que fique.</SplitText>
         </h2>
+        <p className="contact__person">{CONTACT.name}</p>
       </div>
       <nav aria-label="Links de contato">
-        {["contato@studiomotion.com.br", "Instagram", "Vimeo"].map((item) => (
-          <Magnetic key={item}>
+        {links.map((link) => (
+          <Magnetic key={link.key}>
             <a
-              href={item.includes("@") ? `mailto:${item}` : "#"}
+              href={link.href}
+              target="_blank"
+              rel="noreferrer"
               onMouseEnter={() => setCursor("link")}
               onMouseLeave={() => setCursor("default")}
             >
-              <Scramble>{item}</Scramble>
-              {item.includes("@") ? <FiMail /> : <FiArrowUpRight />}
+              <Scramble>{link.label}</Scramble>
+              {link.icon}
             </a>
           </Magnetic>
         ))}

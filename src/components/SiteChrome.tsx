@@ -805,16 +805,20 @@ const TAP_TOLERANCE_PX = 8;
 
 function FilmstripPanel({
   project,
+  index,
   setCursor,
   onActivate,
   onDeactivate
 }: {
   project: Project;
+  // This panel's position in the (looped, doubled) list — passed back up on activation so
+  // the carousel can look up where it currently sits and pull it to center screen.
+  index: number;
   setCursor: (mode: CursorMode) => void;
   // Passes the panel's own shrink() up so the carousel can force it closed from outside —
   // specifically when a drag starts, so someone who doesn't want to watch a featured clip
   // through can just swipe past it instead of being stuck waiting for it to end.
-  onActivate: (cancel: () => void) => void;
+  onActivate: (cancel: () => void, index: number) => void;
   onDeactivate: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -827,7 +831,7 @@ function FilmstripPanel({
   const grow = () => {
     setActive(true);
     setCursor("play");
-    onActivate(shrink);
+    onActivate(shrink, index);
     const video = videoRef.current;
     if (video) {
       video.currentTime = 0;
@@ -901,24 +905,27 @@ function FilmstripPanel({
 export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCursor: (mode: CursorMode) => void }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const activeCount = useRef(0);
   // Whichever panel is currently featured, so a drag-start (see the effect below) can
   // force it to close instead of leaving the carousel stuck until that clip ends on its
   // own — someone who decides mid-clip they'd rather move on can just swipe past it.
   const activePanelCancel = useRef<(() => void) | null>(null);
+  // Which panel to pull to the middle of the screen while it's featured — a panel the
+  // strip had scrolled halfway offscreen would otherwise just grow in place, half clipped
+  // by the edge of the carousel instead of presenting itself front and center.
+  const activePanelIndex = useRef<number | null>(null);
 
-  const handleActivate = (cancel: () => void) => {
+  const handleActivate = (cancel: () => void, index: number) => {
     // Enforces one featured panel at a time: if a different one was already open — most
     // often on touch, where tapping a new panel has no "leave" event to close the last
     // one — this closes it first rather than letting two clips play at once.
     activePanelCancel.current?.();
-    activeCount.current += 1;
     activePanelCancel.current = cancel;
+    activePanelIndex.current = index;
   };
 
   const handleDeactivate = () => {
-    activeCount.current = Math.max(0, activeCount.current - 1);
     activePanelCancel.current = null;
+    activePanelIndex.current = null;
   };
 
   // Repeated twice so the wrap point (see wrap() below) always lands on identical content
@@ -995,6 +1002,23 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
       lit = nearest;
     };
 
+    // How much of the remaining gap to a target closes per ~frame — used for both easing
+    // velocity toward its target (autoplay speed, or a stop) and easing position toward a
+    // panel being centered. One continuous formula for every transition between drag,
+    // coast, autoplay and centering means none of them can ever meet as a visible snap.
+    const easeFactor = (perFrameRate: number, dt: number) => 1 - Math.pow(perFrameRate, dt / 16.67);
+
+    // Shortest signed distance from `from` to `to` around a loop of length `width` — the
+    // direct difference could mean sweeping all the way across the strip the long way
+    // round just because position happens to be wrapped near the opposite edge.
+    const shortestDelta = (from: number, to: number, width: number) => {
+      if (!width) return to - from;
+      let delta = (to - from) % width;
+      if (delta > width / 2) delta -= width;
+      if (delta < -width / 2) delta += width;
+      return delta;
+    };
+
     const loop = (time: number) => {
       raf = requestAnimationFrame(loop);
       if (!onScreen) {
@@ -1005,19 +1029,27 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
       lastFrameTime = time;
 
       if (!dragging) {
-        if (Math.abs(velocity) > 0.01) {
-          // A drag release keeps coasting at its own speed, decaying back to the
-          // autoplay pace instead of snapping straight to it.
-          position += velocity * dt;
-          velocity *= Math.pow(0.94, dt / 16.67);
-          if (Math.abs(velocity) < 0.01) velocity = 0;
-        } else if (!calmer.matches && activeCount.current === 0) {
-          // A featured panel (hovered on desktop, tapped on mobile) holds the strip still
-          // so its clip can be watched in full — see grow()/onEnded() on FilmstripPanel,
-          // which is what drives activeCount back to 0 once that clip finishes.
-          position -= AUTOPLAY_PX_PER_MS * dt;
+        const centeringIndex = activePanelIndex.current;
+        const centerTarget = centeringIndex !== null ? centers[centeringIndex] : undefined;
+
+        if (centerTarget !== undefined) {
+          // A featured panel (hovered on desktop, tapped on mobile) is pulled to the
+          // middle of the screen — wherever the strip had it positioned when it was
+          // activated — instead of just growing in place, which could leave most of it
+          // clipped by the edge of the carousel if it was only half scrolled into view.
+          const target = wrap(window.innerWidth / 2 - centerTarget);
+          position = wrap(position + shortestDelta(position, target, singleWidth) * easeFactor(0.86, dt));
+          velocity = 0;
+        } else {
+          // Autoplay's steady speed, or a stop when motion is reduced. Velocity eases
+          // toward this target every frame — rather than decaying to zero and then
+          // jumping straight to autoplay's fixed speed — so a released drag's own
+          // momentum blends into autoplay (in whichever direction it was already
+          // heading) instead of visibly snapping when the two meet.
+          const targetVelocity = calmer.matches ? 0 : -AUTOPLAY_PX_PER_MS;
+          velocity += (targetVelocity - velocity) * easeFactor(0.94, dt);
+          position = wrap(position + velocity * dt);
         }
-        position = wrap(position);
         apply();
       }
       lightNearest();
@@ -1119,6 +1151,7 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
           <FilmstripPanel
             key={`${project.slug}-${index}`}
             project={project}
+            index={index}
             setCursor={setCursor}
             onActivate={handleActivate}
             onDeactivate={handleDeactivate}

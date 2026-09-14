@@ -917,9 +917,27 @@ function FilmstripPanel({
   );
 }
 
+// However many real cards fit end to end at this width, recycling (see the effect below)
+// keeps the loop going forever without ever inventing content. But recycling only
+// reorders whatever's already rendered — it can't make three cards span a screen wide
+// enough for eight, and with too few, the strip runs out partway across, leaving bare
+// background for the rest of the width. So the same handful of real projects gets
+// rendered this many times over, just enough that a wide screen never runs dry; as more
+// real projects are added, fewer repeats are needed until eventually none are.
+const MIN_RENDERED_CARDS = 12;
+
+function repeatToFillWidth(projects: Project[]) {
+  if (projects.length === 0) return [];
+  const copies = Math.max(1, Math.ceil(MIN_RENDERED_CARDS / projects.length));
+  return Array.from({ length: copies }, (_, copy) =>
+    projects.map((project) => ({ project, key: `${project.slug}-${copy}` }))
+  ).flat();
+}
+
 export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCursor: (mode: CursorMode) => void }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const renderedCards = repeatToFillWidth(projects);
   // Whichever panel is currently featured, so a drag-start or arrow-nav click (see the
   // effect below) can force it to close instead of leaving the carousel stuck until that
   // clip ends on its own — someone who decides mid-clip they'd rather move on can just
@@ -1220,9 +1238,9 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
         <FiChevronLeft />
       </button>
       <div className="filmstrip__track" ref={trackRef}>
-        {projects.map((project) => (
+        {renderedCards.map(({ project, key }) => (
           <FilmstripPanel
-            key={project.slug}
+            key={key}
             project={project}
             setCursor={setCursor}
             onActivate={handleActivate}

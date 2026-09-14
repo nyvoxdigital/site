@@ -851,7 +851,16 @@ function FilmstripPanel({
   // The clip has no loop attribute (see below) specifically so this fires: reaching the
   // end is what hands the panel — and the carousel's autoplay, paused for as long as any
   // panel is featured — back to normal, without needing the pointer to move away first.
-  const onEnded = () => shrink();
+  // A video that has played keeps showing its final frame once paused — the poster only
+  // ever displays before anything has loaded, and the browser never brings it back on its
+  // own. Since this clip appears twice in the looping strip, that left the two copies of
+  // the same video showing two different still images: whichever one someone had already
+  // watched sat frozen on its last frame, the other still on the original poster. load()
+  // resets the element back to that pre-load state, so the poster reliably returns.
+  const onEnded = () => {
+    shrink();
+    videoRef.current?.load();
+  };
 
   // Gated to a real mouse: a touchscreen fires this same enter/leave pair around a tap,
   // which would otherwise flash the panel bigger and then immediately shrink it back

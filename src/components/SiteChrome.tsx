@@ -1134,7 +1134,9 @@ function ClientLogo({ name, src }: Brand) {
     return <span className="clients__fallback">{name}</span>;
   }
 
-  return <img ref={imgRef} src={src} alt={name} loading="lazy" onError={() => setBroken(true)} />;
+  return (
+    <img ref={imgRef} src={src} alt={name} loading="lazy" draggable={false} onError={() => setBroken(true)} />
+  );
 }
 
 // Looped twice so the CSS scroll animation can wrap seamlessly at -50%,

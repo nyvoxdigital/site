@@ -323,7 +323,7 @@ main {
 .clients {
   position: relative;
   overflow: hidden;
-  padding: clamp(2.6rem, 5vw, 4rem) 0;
+  padding: clamp(3rem, 6vw, 5rem) 0;
   background: #050505;
   border-bottom: 1px solid var(--line);
 }
@@ -359,6 +359,9 @@ main {
   width: max-content;
   gap: clamp(2.5rem, 6vw, 5rem);
   animation: clients-scroll 34s linear infinite;
+  /* Belt and braces: nothing in this file ever pauses it, but this forecloses any browser
+     default (an image mid-drag-gesture, a long-press callout) from doing it instead. */
+  animation-play-state: running !important;
 }
 
 @keyframes clients-scroll {
@@ -382,15 +385,19 @@ main {
 
 .clients img {
   flex: 0 0 auto;
-  height: clamp(2.4rem, 4.4vw, 3.6rem);
+  height: clamp(3.5rem, 6vw, 6.5rem);
   width: auto;
   filter: grayscale(1) brightness(0) invert(1);
   opacity: 0.72;
   transition: opacity 240ms ease;
-}
-
-.clients img:hover {
-  opacity: 1;
+  /* A touch holding on an <img> normally readies the browser's own drag-ghost (mouse) or
+     save-image callout (iOS) — and to get ready for either, the browser stops updating
+     that element, which reads as the marquee grinding to a halt right under the pointer.
+     None of that applies to a decorative logo, so it is switched off outright. */
+  pointer-events: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 .clients__fallback {

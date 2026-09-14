@@ -825,7 +825,14 @@ function FilmstripPanel({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    };
+  }, []);
 
   // Always restarts from the top: this is a "watch the whole clip" feature, not a resume,
   // and the clip is meant to play through exactly once (see the ended handler below) —
@@ -865,12 +872,36 @@ function FilmstripPanel({
   // Gated to a real mouse: a touchscreen fires this same enter/leave pair around a tap,
   // which would otherwise flash the panel bigger and then immediately shrink it back
   // before the tap handler below ever gets a say.
+  // A brief dwell before this actually takes effect. Autoplay keeps sliding panels past a
+  // mouse that never moved a pixel, and — at least in Chrome — a browser does re-run
+  // hover hit-testing when the content under a static pointer changes, not just when the
+  // pointer itself moves. Near the edges of the strip, where panels are constantly
+  // entering and leaving, that produced a burst of enter/leave pairs the mouse never
+  // asked for, each one growing, centering and immediately abandoning a different panel —
+  // which read as the strip suddenly racing. Requiring the pointer to still be here a
+  // moment later is enough to tell "someone paused on this" from "the strip moved under
+  // a parked cursor."
+  const HOVER_DWELL_MS = 120;
+
   const onPointerEnter = (event: React.PointerEvent) => {
-    if (event.pointerType === "mouse") grow();
+    if (event.pointerType !== "mouse") return;
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => {
+      hoverTimer.current = null;
+      grow();
+    }, HOVER_DWELL_MS);
   };
 
   const onPointerLeave = (event: React.PointerEvent) => {
-    if (event.pointerType === "mouse") shrink();
+    if (event.pointerType !== "mouse") return;
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
+    // Only if grow() actually ran: with the dwell above, a pointerleave can now arrive
+    // before that timer ever fires, and shrink() unconditionally would clear whichever
+    // OTHER panel is genuinely featured right now (see handleDeactivate on Filmstrip).
+    if (active) shrink();
   };
 
   const onPointerDown = (event: React.PointerEvent) => {

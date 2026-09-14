@@ -799,6 +799,14 @@ function FilmstripPanel({
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [active, setActive] = useState(false);
+  // Separate from `active`: on a slow connection, the tap/hover registers instantly but
+  // the first real video frame can take a moment to arrive over the network. Driving the
+  // glow/lift class off `active` directly meant it appeared the instant a tap landed,
+  // with nothing but that glow's own colour showing through where the video should be —
+  // a solid red card with no video in it. This only flips on once the video actually has
+  // a frame to show (the `playing` event below), so the glow only ever appears alongside
+  // real content, never in front of an empty video element.
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -822,6 +830,7 @@ function FilmstripPanel({
 
   const shrink = () => {
     setActive(false);
+    setVisible(false);
     setCursor("default");
     onDeactivate();
     videoRef.current?.pause();
@@ -896,7 +905,7 @@ function FilmstripPanel({
 
   return (
     <div
-      className={`filmstrip-panel${active ? " filmstrip-panel--active" : ""}`}
+      className={`filmstrip-panel${visible ? " filmstrip-panel--active" : ""}`}
       role="button"
       tabIndex={0}
       onPointerEnter={onPointerEnter}
@@ -911,6 +920,7 @@ function FilmstripPanel({
         muted
         playsInline
         preload="none"
+        onPlaying={() => setVisible(true)}
         onEnded={onEnded}
       />
     </div>

@@ -1100,19 +1100,22 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
 
 type Brand = { name: string; src: string };
 
+const LOGOS_BASE_URL = "https://pub-3e9f9cb57ae84ac58d16106bb6690f67.r2.dev";
+
 const brands: Brand[] = [
-  { name: "Red Bull", src: "/logos/red-bull.svg" },
-  { name: "RAM", src: "/logos/ram.svg" },
-  { name: "iFlight", src: "/logos/iflight.svg" },
-  { name: "DJI", src: "/logos/dji.svg" },
-  { name: "Chevrolet", src: "/logos/chevrolet.svg" },
-  { name: "GM", src: "/logos/gm.svg" },
-  { name: "Ford", src: "/logos/ford.svg" }
+  { name: "Red Bull", src: `${LOGOS_BASE_URL}/red-bull.png` },
+  { name: "Gillette", src: `${LOGOS_BASE_URL}/gillette.png` },
+  { name: "30 Praum", src: `${LOGOS_BASE_URL}/30-praum.png` },
+  { name: "Supernova", src: `${LOGOS_BASE_URL}/supernova.png` },
+  { name: "Illusionize", src: `${LOGOS_BASE_URL}/illusionize.png` },
+  { name: "Beira Alta Cosméticos", src: `${LOGOS_BASE_URL}/beira-alta-cosmeticos.png` },
+  { name: "Proper Jack", src: `${LOGOS_BASE_URL}/proper-jack.png` },
+  { name: "Afiliados Brasil", src: `${LOGOS_BASE_URL}/afiliados-brasil.png` },
+  { name: "iHub Afiliates", src: `${LOGOS_BASE_URL}/ihub-afiliates.png` }
 ];
 
-// Renders the real logo file once it exists in /public/logos; falls back to
-// the brand name as text so the row still looks intentional before the
-// asset is added.
+// Falls back to the brand name as text if a logo ever 404s, so the row still
+// looks intentional instead of showing a broken-image icon.
 function ClientLogo({ name, src }: Brand) {
   const [broken, setBroken] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);

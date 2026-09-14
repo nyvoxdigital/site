@@ -917,13 +917,17 @@ function FilmstripPanel({
           (an ::before on .filmstrip-panel) has room to bleed past those same corners
           instead of being clipped away along with everything else. */}
       <div className="filmstrip-panel__inner">
+        {/* metadata, not none: lets the browser have duration/dimensions and often a
+            little buffered data ready ahead of a tap, so play() has less to fetch before
+            the first frame paints — without "auto"'s cost of pulling the whole clip for
+            every rendered card before anyone asks for it. */}
         <video
           ref={videoRef}
           src={videoSrc(project.video)}
           poster={posterSrc(project.video)}
           muted
           playsInline
-          preload="none"
+          preload="metadata"
           onPlaying={() => setVisible(true)}
           onEnded={onEnded}
         />

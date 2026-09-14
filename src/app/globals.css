@@ -536,9 +536,24 @@ main {
      card as a solid red wash. The reference design's frosted look assumed a colourful
      background worth blurring; this page is near-black, so it bought nothing and cost
      exactly this bug. */
-  background: var(--paper);
+  background-color: var(--paper);
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: border-color 400ms ease;
+}
+
+/* The poster still, painted behind the video from the --poster variable each card sets
+   (see FilmstripPanel). Cropped and dimmed exactly like the video above it, so when a
+   decoded frame finally lands on top there's nothing to see change — no brightness pop,
+   no black gap, just the still turning into moving footage. */
+.filmstrip-panel__inner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--poster);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(0.85) saturate(0.95);
 }
 
 .filmstrip-panel--active .filmstrip-panel__inner {

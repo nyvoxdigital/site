@@ -37,9 +37,11 @@ export const projects: Project[] = [
     videos: ["/videos/yan-web.mp4"],
     // The first ~15s cut rapidly between action, an interview, and trophy cutaways —
     // those trophies happen to be bright red, and cropped into the carousel's narrow
-    // portrait card they read as a near-solid red block passing by. 18s is where the
-    // edit settles into continuous footvolley action with nothing red in frame.
-    previewStart: 18
+    // portrait card they read as a near-solid red block passing by. 24s is well clear of
+    // that, and its frame is sharp rather than mid-motion-blur — the poster is taken from
+    // this exact timestamp, so the still and the first played frame are the same image and
+    // the handoff between them is invisible.
+    previewStart: 24
   },
   {
     slug: "soul-fest",

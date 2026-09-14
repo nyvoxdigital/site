@@ -10,6 +10,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactElement,
   type ReactNode,
   type Ref
@@ -975,7 +976,16 @@ function FilmstripPanel({
       {/* Clips the video to the rounded corners — kept off the outer element so its glow
           (an ::before on .filmstrip-panel) has room to bleed past those same corners
           instead of being clipped away along with everything else. */}
-      <div className="filmstrip-panel__inner">
+      {/* The poster doubles as the card's own background, not just the video's poster
+          attribute. A video element only shows that attribute until something starts
+          loading — from the first seek onward it paints nothing at all until a frame is
+          decoded, which is the black gap between tapping and playback starting. Painting
+          the same still behind the video means that gap shows the poster instead of an
+          empty card, for a seek, a stall, or a slow connection alike. */}
+      <div
+        className="filmstrip-panel__inner"
+        style={{ "--poster": `url(${posterSrc(project.video)})` } as CSSProperties}
+      >
         {/* metadata, not none: lets the browser have duration/dimensions and often a
             little buffered data ready ahead of a tap, so play() has less to fetch before
             the first frame paints — without "auto"'s cost of pulling the whole clip for

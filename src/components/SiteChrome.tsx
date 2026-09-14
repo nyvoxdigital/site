@@ -6,6 +6,7 @@ import Lenis from "lenis";
 import {
   cloneElement,
   isValidElement,
+  memo,
   useEffect,
   useRef,
   useState,
@@ -778,7 +779,12 @@ function StatCounter({ stat }: { stat: Stat }) {
   );
 }
 
-export function Stats() {
+// Memoized (like Clients and Contact below): it takes no props that ever change, so
+// without this it would still re-render — and re-diff its whole subtree — every time
+// setCursor fires from a hover anywhere else on the page, purely because it shares a
+// parent with the cursor state. Cheap on its own, but it adds up across every component
+// on the page doing the same thing on every single hover-in and hover-out.
+export const Stats = memo(function Stats() {
   return (
     <section className="stats" aria-label="Números do estúdio">
       {stats.map((stat) => (
@@ -789,7 +795,7 @@ export function Stats() {
       ))}
     </section>
   );
-}
+});
 
 // The strip advances sideways on its own, forever — the projects array is duplicated so
 // the loop can wrap without ever running out of content, the same trick used by the
@@ -1225,7 +1231,9 @@ function ClientLogo({ name, src }: Brand) {
 
 // Looped twice so the CSS scroll animation can wrap seamlessly at -50%,
 // same trick as Filmstrip — reads as an endless row even with few logos.
-export function Clients() {
+// Memoized: no props ever change, so without this it would still re-render on every
+// setCursor call from anywhere on the page — see the note on Stats above.
+export const Clients = memo(function Clients() {
   const loopBrands = [...brands, ...brands];
 
   return (
@@ -1241,7 +1249,7 @@ export function Clients() {
       </div>
     </section>
   );
-}
+});
 
 // Contact identity for the studio's direct line, in one place — update here if the
 // person, number, or handle behind the site ever changes.
@@ -1252,7 +1260,10 @@ export const CONTACT = {
   instagramHandle: "murilofilmsbr"
 };
 
-export function Contact({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
+// Memoized: setCursor is the stable function useState always returns, so this only ever
+// needs to re-render for its own reasons — not on every setCursor call elsewhere on the
+// page, which is what happens without this (see the note on Stats above).
+export const Contact = memo(function Contact({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   const links = [
     {
       key: "whatsapp",
@@ -1294,4 +1305,4 @@ export function Contact({ setCursor }: { setCursor: (mode: CursorMode) => void }
       </nav>
     </footer>
   );
-}
+});

@@ -1,7 +1,7 @@
 "use client";
 
 import gsap from "gsap";
-import { useEffect, useState, type FormEvent } from "react";
+import { memo, useEffect, useState, type FormEvent } from "react";
 import { FiArrowRight } from "react-icons/fi";
 import { hasRealFootage, projects } from "@/lib/works";
 
@@ -26,7 +26,11 @@ import {
   useTextReveal
 } from "@/components/SiteChrome";
 
-function Hero() {
+// Memoized: no props ever change, so without this it would re-render — and re-diff its
+// whole subtree, canvas and all — every time setCursor fires from a hover anywhere else
+// on the page, purely because it shares a parent with the cursor state. Same reasoning
+// as the note on Portfolio below, just more expensive here given what Hero renders.
+const Hero = memo(function Hero() {
   return (
     <section className="hero" id="topo">
       <BackgroundVideo
@@ -48,9 +52,16 @@ function Hero() {
       <span className="scroll-cue">Role</span>
     </section>
   );
-}
+});
 
-function Portfolio({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
+// Memoized: setCursor is the stable function useState always returns, so its identity
+// never changes — meaning without this, Portfolio (and the whole Filmstrip carousel
+// inside it, six video panels included) would still re-render on every single hover-in
+// and hover-out anywhere else on the page, since `cursor` itself lives one level up in
+// Home. That's the kind of thing that compounds into visible jank exactly when pointer
+// events are already coming in fast, like right as a featured clip hands the carousel
+// back to autoplay.
+const Portfolio = memo(function Portfolio({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   return (
     <section className="portfolio" id="portfolio">
       <div className="section-heading">
@@ -62,7 +73,7 @@ function Portfolio({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
       <Filmstrip projects={showcasedProjects} setCursor={setCursor} />
     </section>
   );
-}
+});
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {
   foto: "Foto",
@@ -96,7 +107,9 @@ function handleBriefingSubmit(event: FormEvent<HTMLFormElement>) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
+// Memoized: same reasoning as Portfolio above — setCursor's identity never changes, so
+// nothing here needs to re-render just because a hover somewhere else on the page called it.
+const Hire = memo(function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   return (
     <section className="hire" id="contrate">
       <div className="hire__copy">
@@ -171,7 +184,7 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
       </form>
     </section>
   );
-}
+});
 
 export default function Home() {
   const [cursor, setCursor] = useState<CursorMode>("default");

@@ -198,6 +198,13 @@ const REAL_FOOTAGE: Record<string, string> = {
   "/videos/soul-fest-web.mp4": "soul-fest-web.mp4"
 };
 
+// Everything else still points at the shared placeholder clip, so listing every project
+// would mean the same clip playing over and over next to the handful with real footage.
+// Only the ones with a real clip go on display until the rest catch up.
+export function hasRealFootage(project: Project) {
+  return project.video in REAL_FOOTAGE;
+}
+
 // A still frame pulled from each real clip itself, so the poster matches what's about to
 // play. Projects without an entry here fall back to the placeholder poster below.
 const REAL_POSTERS: Record<string, string> = {

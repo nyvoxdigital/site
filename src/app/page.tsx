@@ -3,7 +3,12 @@
 import gsap from "gsap";
 import { useEffect, useState } from "react";
 import { FiArrowRight } from "react-icons/fi";
-import { projects } from "@/lib/works";
+import { hasRealFootage, projects } from "@/lib/works";
+
+// Only projects with their own real clip go in the carousel — everything else still
+// shares one placeholder video, and showing those alongside would just repeat the same
+// clip over and over next to the real ones.
+const showcasedProjects = projects.filter(hasRealFootage);
 import {
   BackgroundVideo,
   Clients,
@@ -53,7 +58,7 @@ function Portfolio({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
           <SplitText>Trabalhos em vídeo</SplitText>
         </h2>
       </div>
-      <Filmstrip projects={projects} setCursor={setCursor} />
+      <Filmstrip projects={showcasedProjects} setCursor={setCursor} />
     </section>
   );
 }

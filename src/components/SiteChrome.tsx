@@ -819,16 +819,17 @@ function FilmstripPanel({
     };
   }, []);
 
-  // Always restarts from the top: this is a "watch the whole clip" feature, not a resume,
-  // and the clip is meant to play through exactly once (see the ended handler below) —
-  // starting mid-way through would make "once" an arbitrary partial view.
+  // Always restarts from the same point (project.previewStart, or the very top) rather
+  // than resuming wherever it last paused — this is a "watch the clip" feature, not a
+  // resume, and it's meant to play through to the end exactly once (see the ended
+  // handler below) every time, not an arbitrary partial view depending on history.
   const grow = () => {
     setActive(true);
     setCursor("play");
     onActivate(shrink);
     const video = videoRef.current;
     if (!video) return;
-    video.currentTime = 0;
+    video.currentTime = project.previewStart ?? 0;
     video.play().catch(() => {});
 
     // requestVideoFrameCallback fires once an actual decoded frame is about to be

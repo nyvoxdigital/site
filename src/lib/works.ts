@@ -6,6 +6,11 @@ export type Project = {
   video: string;
   about: string;
   videos: string[];
+  // Where the carousel preview starts playing from, in seconds — defaults to the very
+  // start. For a clip that opens on something that doesn't sell the work at a glance
+  // (an interview intro, a title card), skipping ahead to where the actual footage
+  // begins makes for a better few seconds than the raw edit's own opening does.
+  previewStart?: number;
 };
 
 export function posterFor(video: string) {
@@ -29,7 +34,12 @@ export const projects: Project[] = [
     year: "2026",
     video: "/videos/yan-web.mp4",
     about: "Edição completa em parceria com @murilofilmsbr.",
-    videos: ["/videos/yan-web.mp4"]
+    videos: ["/videos/yan-web.mp4"],
+    // The first ~15s cut rapidly between action, an interview, and trophy cutaways —
+    // those trophies happen to be bright red, and cropped into the carousel's narrow
+    // portrait card they read as a near-solid red block passing by. 18s is where the
+    // edit settles into continuous footvolley action with nothing red in frame.
+    previewStart: 18
   },
   {
     slug: "soul-fest",

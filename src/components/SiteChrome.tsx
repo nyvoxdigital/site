@@ -803,6 +803,7 @@ function FilmstripPanel({
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const frameCallbackId = useRef<number | null>(null);
+  const pendingSeekCleanup = useRef<(() => void) | null>(null);
   const [active, setActive] = useState(false);
   // Separate from `active`: on a slow connection, the tap/hover registers instantly but
   // the first real video frame can take a moment to arrive over the network. Driving the
@@ -816,6 +817,7 @@ function FilmstripPanel({
   useEffect(() => {
     return () => {
       if (hoverTimer.current) clearTimeout(hoverTimer.current);
+      pendingSeekCleanup.current?.();
       const video = videoRef.current;
       if (video && frameCallbackId.current !== null && typeof video.cancelVideoFrameCallback === "function") {
         video.cancelVideoFrameCallback(frameCallbackId.current);
@@ -833,19 +835,42 @@ function FilmstripPanel({
     onActivate(shrink, center ? panelRef.current : null);
     const video = videoRef.current;
     if (!video) return;
-    video.currentTime = project.previewStart ?? 0;
-    video.play().catch(() => {});
 
-    // requestVideoFrameCallback fires once an actual decoded frame is about to be
-    // painted — a stronger guarantee than the `playing` event, which on at least some
-    // mobile browsers can fire a moment before anything is really on screen yet, letting
-    // the glow show through empty video for that gap. Falls back to `playing` (see the
-    // video element below) wherever this API isn't available.
-    if (typeof video.requestVideoFrameCallback === "function") {
-      frameCallbackId.current = video.requestVideoFrameCallback(() => {
-        frameCallbackId.current = null;
-        setVisible(true);
-      });
+    const startPlayback = () => {
+      video.play().catch(() => {});
+      // requestVideoFrameCallback fires once an actual decoded frame is about to be
+      // painted — a stronger guarantee than the `playing` event, which on at least some
+      // mobile browsers can fire a moment before anything is really on screen yet,
+      // letting the glow show through empty video for that gap. Falls back to `playing`
+      // (see the video element below) wherever this API isn't available.
+      if (typeof video.requestVideoFrameCallback === "function") {
+        frameCallbackId.current = video.requestVideoFrameCallback(() => {
+          frameCallbackId.current = null;
+          setVisible(true);
+        });
+      }
+    };
+
+    const startAt = project.previewStart ?? 0;
+    // The >0.05s guard matters: setting currentTime to a value it's already at can skip
+    // the seek algorithm entirely on some browsers, meaning `seeked` never fires — which
+    // would otherwise leave this waiting forever instead of ever calling play().
+    if (startAt > 0 && Math.abs(video.currentTime - startAt) > 0.05) {
+      // Setting currentTime and calling play() in the same tick can race: some browsers
+      // begin decoding from wherever the video already was — normally its very start —
+      // before the seek this triggers has actually landed, showing a flash of whatever's
+      // at time zero before jumping ahead to startAt. Waiting for `seeked` before calling
+      // play() rules that out; shrink() cancels this listener if the panel closes first.
+      const onSeeked = () => {
+        pendingSeekCleanup.current = null;
+        startPlayback();
+      };
+      pendingSeekCleanup.current = () => video.removeEventListener("seeked", onSeeked);
+      video.addEventListener("seeked", onSeeked);
+      video.currentTime = startAt;
+    } else {
+      video.currentTime = startAt;
+      startPlayback();
     }
   };
 
@@ -854,6 +879,8 @@ function FilmstripPanel({
     setVisible(false);
     setCursor("default");
     onDeactivate();
+    pendingSeekCleanup.current?.();
+    pendingSeekCleanup.current = null;
     const video = videoRef.current;
     if (video) {
       if (frameCallbackId.current !== null && typeof video.cancelVideoFrameCallback === "function") {

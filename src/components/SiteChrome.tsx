@@ -818,11 +818,18 @@ function FilmstripPanel({
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const [active, setActive] = useState(false);
 
+  // Always restarts from the top: this is a "watch the whole clip" feature, not a resume,
+  // and the clip is meant to play through exactly once (see the ended handler below) —
+  // starting mid-way through would make "once" an arbitrary partial view.
   const grow = () => {
     setActive(true);
     setCursor("play");
     onActivate();
-    videoRef.current?.play().catch(() => {});
+    const video = videoRef.current;
+    if (video) {
+      video.currentTime = 0;
+      video.play().catch(() => {});
+    }
   };
 
   const shrink = () => {
@@ -831,6 +838,11 @@ function FilmstripPanel({
     onDeactivate();
     videoRef.current?.pause();
   };
+
+  // The clip has no loop attribute (see below) specifically so this fires: reaching the
+  // end is what hands the panel — and the carousel's autoplay, paused for as long as any
+  // panel is featured — back to normal, without needing the pointer to move away first.
+  const onEnded = () => shrink();
 
   // Gated to a real mouse: a touchscreen fires this same enter/leave pair around a tap,
   // which would otherwise flash the panel bigger and then immediately shrink it back
@@ -875,9 +887,9 @@ function FilmstripPanel({
         src={videoSrc(project.video)}
         poster={posterSrc(project.video)}
         muted
-        loop
         playsInline
         preload="none"
+        onEnded={onEnded}
       />
     </div>
   );
@@ -986,7 +998,10 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
           position += velocity * dt;
           velocity *= Math.pow(0.94, dt / 16.67);
           if (Math.abs(velocity) < 0.01) velocity = 0;
-        } else if (!calmer.matches) {
+        } else if (!calmer.matches && activeCount.current === 0) {
+          // A featured panel (hovered on desktop, tapped on mobile) holds the strip still
+          // so its clip can be watched in full — see grow()/onEnded() on FilmstripPanel,
+          // which is what drives activeCount back to 0 once that clip finishes.
           position -= AUTOPLAY_PX_PER_MS * dt;
         }
         position = wrap(position);

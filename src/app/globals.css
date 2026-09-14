@@ -839,11 +839,11 @@ main {
   }
 
   .filmstrip-panel {
-    width: clamp(20rem, 84vw, 28rem);
+    width: clamp(24rem, 94vw, 32rem);
   }
 
   .filmstrip-panel--active {
-    width: clamp(22rem, 92vw, 30rem);
+    width: clamp(26rem, 98vw, 34rem);
   }
 
   .hire__copy {

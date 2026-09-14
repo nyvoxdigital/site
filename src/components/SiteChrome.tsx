@@ -1037,8 +1037,17 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
           // middle of the screen — wherever the strip had it positioned when it was
           // activated — instead of just growing in place, which could leave most of it
           // clipped by the edge of the carousel if it was only half scrolled into view.
+          //
+          // The move is capped at MAX_CENTERING_PX_PER_MS regardless of how far away the
+          // panel is: eased-toward-a-target motion moves fastest exactly when it has the
+          // most ground to cover, so a panel activated near the far edge of the strip
+          // would otherwise cross the screen in a rush before settling — the strip
+          // visibly "flying" past whatever was in between.
           const target = wrap(window.innerWidth / 2 - centerTarget);
-          position = wrap(position + shortestDelta(position, target, singleWidth) * easeFactor(0.86, dt));
+          const MAX_CENTERING_PX_PER_MS = 1.6;
+          const step = shortestDelta(position, target, singleWidth) * easeFactor(0.86, dt);
+          const cappedStep = Math.max(-MAX_CENTERING_PX_PER_MS * dt, Math.min(MAX_CENTERING_PX_PER_MS * dt, step));
+          position = wrap(position + cappedStep);
           velocity = 0;
         } else {
           // Autoplay's steady speed, or a stop when motion is reduced. Velocity eases
@@ -1116,7 +1125,17 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
 
       const now = performance.now();
       const elapsed = now - lastMoveTime;
-      if (elapsed > 0) velocity = (event.clientX - lastMoveX) / elapsed;
+      // Two pointermove events can land on the same millisecond (common right at the
+      // screen edges, where the browser's own back/forward-swipe gesture recognizer is
+      // also racing to interpret the same touch) — dividing by a near-zero elapsed time
+      // there produced velocities in the thousands, which is the strip "flying" that was
+      // reported. A floor on elapsed and a hard cap on the result rule that out; a real
+      // fast flick still reads as fast; a timing glitch no longer reads as a launch.
+      const MAX_DRAG_VELOCITY_PX_PER_MS = 3;
+      if (elapsed > 4) {
+        const raw = (event.clientX - lastMoveX) / elapsed;
+        velocity = Math.max(-MAX_DRAG_VELOCITY_PX_PER_MS, Math.min(MAX_DRAG_VELOCITY_PX_PER_MS, raw));
+      }
       lastMoveTime = now;
       lastMoveX = event.clientX;
     };
@@ -1198,9 +1217,10 @@ function ClientLogo({ name, src }: Brand) {
     return <span className="clients__fallback">{name}</span>;
   }
 
-  return (
-    <img ref={imgRef} src={src} alt={name} loading="lazy" draggable={false} onError={() => setBroken(true)} />
-  );
+  // Not lazy: this row sits right below the hero and is animating from the moment the
+  // page loads, so deferring the fetch only risked a blank flash mid-scroll — the logos
+  // are tiny (under 60KB each) and there's no real bandwidth saving worth that trade.
+  return <img ref={imgRef} src={src} alt={name} draggable={false} onError={() => setBroken(true)} />;
 }
 
 // Looped twice so the CSS scroll animation can wrap seamlessly at -50%,

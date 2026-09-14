@@ -798,19 +798,24 @@ function FilmstripPanel({
   const videoRef = useRef<HTMLVideoElement>(null);
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const frameCallbackId = useRef<number | null>(null);
   const [active, setActive] = useState(false);
   // Separate from `active`: on a slow connection, the tap/hover registers instantly but
   // the first real video frame can take a moment to arrive over the network. Driving the
   // glow/lift class off `active` directly meant it appeared the instant a tap landed,
   // with nothing but that glow's own colour showing through where the video should be —
   // a solid red card with no video in it. This only flips on once the video actually has
-  // a frame to show (the `playing` event below), so the glow only ever appears alongside
-  // real content, never in front of an empty video element.
+  // a frame ready to paint (see grow() below), so the glow only ever appears alongside
+  // real content, never a beat ahead of an empty video element.
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     return () => {
       if (hoverTimer.current) clearTimeout(hoverTimer.current);
+      const video = videoRef.current;
+      if (video && frameCallbackId.current !== null && typeof video.cancelVideoFrameCallback === "function") {
+        video.cancelVideoFrameCallback(frameCallbackId.current);
+      }
     };
   }, []);
 
@@ -822,9 +827,20 @@ function FilmstripPanel({
     setCursor("play");
     onActivate(shrink);
     const video = videoRef.current;
-    if (video) {
-      video.currentTime = 0;
-      video.play().catch(() => {});
+    if (!video) return;
+    video.currentTime = 0;
+    video.play().catch(() => {});
+
+    // requestVideoFrameCallback fires once an actual decoded frame is about to be
+    // painted — a stronger guarantee than the `playing` event, which on at least some
+    // mobile browsers can fire a moment before anything is really on screen yet, letting
+    // the glow show through empty video for that gap. Falls back to `playing` (see the
+    // video element below) wherever this API isn't available.
+    if (typeof video.requestVideoFrameCallback === "function") {
+      frameCallbackId.current = video.requestVideoFrameCallback(() => {
+        frameCallbackId.current = null;
+        setVisible(true);
+      });
     }
   };
 
@@ -833,7 +849,14 @@ function FilmstripPanel({
     setVisible(false);
     setCursor("default");
     onDeactivate();
-    videoRef.current?.pause();
+    const video = videoRef.current;
+    if (video) {
+      if (frameCallbackId.current !== null && typeof video.cancelVideoFrameCallback === "function") {
+        video.cancelVideoFrameCallback(frameCallbackId.current);
+      }
+      frameCallbackId.current = null;
+      video.pause();
+    }
   };
 
   // The clip has no loop attribute (see below) specifically so this fires: reaching the
@@ -928,6 +951,8 @@ function FilmstripPanel({
           muted
           playsInline
           preload="metadata"
+          // Fallback for the rare browser without requestVideoFrameCallback (see grow()) —
+          // harmless to also fire there, setVisible(true) twice is a no-op the second time.
           onPlaying={() => setVisible(true)}
           onEnded={onEnded}
         />

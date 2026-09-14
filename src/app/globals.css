@@ -458,56 +458,74 @@ main {
   cursor: grabbing;
 }
 
+/* Split into two layers on purpose. The glow (this element's own ::before) has to bleed
+   a couple of pixels past the rounded corners to read as a halo — but overflow: hidden
+   clips an element's own pseudo-elements exactly like any other child, so putting both
+   the glow and the "cut the video to the rounded corners" clipping on the very same
+   element left the glow with nowhere to bleed into: it just filled the whole card,
+   behind the video. Every time the video had nothing decoded yet to paint over it, the
+   glow was all that showed — solid red where a video was about to be. This element stays
+   unclipped and only carries the glow, the lift, and the shadow; .filmstrip-panel__inner
+   below does the actual clipping around the video. */
 .filmstrip-panel {
   position: relative;
   flex: 0 0 280px;
   width: 280px;
   height: 500px;
-  overflow: hidden;
   display: block;
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1), border-color 400ms ease, box-shadow 400ms ease;
+  transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 400ms ease;
   will-change: transform;
 }
 
-/* The glow ring: a blurred, oversized copy of the card sitting behind it, invisible until
-   hover or touch brings it up. Cheaper than animating a real box-shadow of this size. */
 .filmstrip-panel::before {
   content: "";
   position: absolute;
   inset: -2px;
   z-index: -1;
-  border-radius: inherit;
+  border-radius: 1.5rem;
   background: linear-gradient(135deg, var(--accent), #7a1a17, var(--accent));
   filter: blur(10px);
   opacity: 0;
   transition: opacity 400ms ease;
 }
 
-/* A gentle darkening toward the bottom edge — the same treatment a title/description
-   would sit on, kept even without one so the card reads as considered rather than bare. */
-.filmstrip-panel::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(to bottom, transparent 65%, rgba(0, 0, 0, 0.45) 100%);
-}
-
 .filmstrip-panel:hover,
 .filmstrip-panel--active {
   transform: translateY(-8px) scale(1.02);
-  border-color: rgba(224, 66, 59, 0.6);
   box-shadow: 0 20px 60px rgba(224, 66, 59, 0.35);
 }
 
 .filmstrip-panel:hover::before,
 .filmstrip-panel--active::before {
   opacity: 0.6;
+}
+
+.filmstrip-panel__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  transition: border-color 400ms ease;
+}
+
+.filmstrip-panel:hover .filmstrip-panel__inner,
+.filmstrip-panel--active .filmstrip-panel__inner {
+  border-color: rgba(224, 66, 59, 0.6);
+}
+
+/* A gentle darkening toward the bottom edge — the same treatment a title/description
+   would sit on, kept even without one so the card reads as considered rather than bare. */
+.filmstrip-panel__inner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent 65%, rgba(0, 0, 0, 0.45) 100%);
 }
 
 .filmstrip-panel video {
@@ -562,6 +580,7 @@ main {
 
 @media (prefers-reduced-motion: reduce) {
   .filmstrip-panel,
+  .filmstrip-panel__inner,
   .filmstrip-panel video {
     transition: none;
   }

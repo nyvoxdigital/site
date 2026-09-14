@@ -913,16 +913,21 @@ function FilmstripPanel({
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
     >
-      <video
-        ref={videoRef}
-        src={videoSrc(project.video)}
-        poster={posterSrc(project.video)}
-        muted
-        playsInline
-        preload="none"
-        onPlaying={() => setVisible(true)}
-        onEnded={onEnded}
-      />
+      {/* Clips the video to the rounded corners — kept off the outer element so its glow
+          (an ::before on .filmstrip-panel) has room to bleed past those same corners
+          instead of being clipped away along with everything else. */}
+      <div className="filmstrip-panel__inner">
+        <video
+          ref={videoRef}
+          src={videoSrc(project.video)}
+          poster={posterSrc(project.video)}
+          muted
+          playsInline
+          preload="none"
+          onPlaying={() => setVisible(true)}
+          onEnded={onEnded}
+        />
+      </div>
     </div>
   );
 }

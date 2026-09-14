@@ -14,7 +14,7 @@ import {
   type ReactNode,
   type Ref
 } from "react";
-import { FiArrowUpRight } from "react-icons/fi";
+import { FiArrowUpRight, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { FaInstagram, FaWhatsapp } from "react-icons/fa";
 import { posterSrc, videoSrc, type Project } from "@/lib/works";
 
@@ -388,30 +388,7 @@ export function useCinematicScroll() {
       wheelMultiplier: 0.9
     });
 
-    // Scroll velocity, published as a CSS variable for anything that wants to lean into
-    // the movement. One number written per frame drives the whole effect: the elements
-    // that use it do so through transform, which the compositor handles on its own
-    // without the layout ever being recalculated.
-    const root = document.documentElement;
-    const calmer = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const MAX_SKEW = 2.4;
-    let skew = 0;
-    let published = 0;
-
-    const update = (time: number) => {
-      lenis.raf(time * 1000);
-      if (calmer.matches) return;
-
-      const target = gsap.utils.clamp(-MAX_SKEW, MAX_SKEW, lenis.velocity * 0.08);
-      // Eased toward the target rather than set outright, so stopping a fast scroll
-      // settles back upright instead of snapping.
-      skew += (target - skew) * 0.12;
-
-      if (Math.abs(skew - published) > 0.01) {
-        published = skew;
-        root.style.setProperty("--scroll-skew", `${skew.toFixed(2)}deg`);
-      }
-    };
+    const update = (time: number) => lenis.raf(time * 1000);
 
     gsap.ticker.add(update);
     gsap.ticker.lagSmoothing(0);
@@ -419,7 +396,6 @@ export function useCinematicScroll() {
 
     return () => {
       gsap.ticker.remove(update);
-      root.style.removeProperty("--scroll-skew");
       lenis.destroy();
     };
   }, []);
@@ -807,20 +783,16 @@ const TAP_TOLERANCE_PX = 8;
 
 function FilmstripPanel({
   project,
-  index,
   setCursor,
   onActivate,
   onDeactivate
 }: {
   project: Project;
-  // This panel's position in the (looped, doubled) list — passed back up on activation so
-  // the carousel can look up where it currently sits and pull it to center screen.
-  index: number;
   setCursor: (mode: CursorMode) => void;
   // Passes the panel's own shrink() up so the carousel can force it closed from outside —
-  // specifically when a drag starts, so someone who doesn't want to watch a featured clip
-  // through can just swipe past it instead of being stuck waiting for it to end.
-  onActivate: (cancel: () => void, index: number) => void;
+  // specifically when a drag or an arrow-nav click starts, so someone who doesn't want to
+  // watch a featured clip through can just move on instead of waiting for it to end.
+  onActivate: (cancel: () => void) => void;
   onDeactivate: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -840,7 +812,7 @@ function FilmstripPanel({
   const grow = () => {
     setActive(true);
     setCursor("play");
-    onActivate(shrink, index);
+    onActivate(shrink);
     const video = videoRef.current;
     if (video) {
       video.currentTime = 0;
@@ -870,17 +842,17 @@ function FilmstripPanel({
   };
 
   // Gated to a real mouse: a touchscreen fires this same enter/leave pair around a tap,
-  // which would otherwise flash the panel bigger and then immediately shrink it back
+  // which would otherwise flash the panel active and then immediately shrink it back
   // before the tap handler below ever gets a say.
+  //
   // A brief dwell before this actually takes effect. Autoplay keeps sliding panels past a
   // mouse that never moved a pixel, and — at least in Chrome — a browser does re-run
   // hover hit-testing when the content under a static pointer changes, not just when the
   // pointer itself moves. Near the edges of the strip, where panels are constantly
   // entering and leaving, that produced a burst of enter/leave pairs the mouse never
-  // asked for, each one growing, centering and immediately abandoning a different panel —
-  // which read as the strip suddenly racing. Requiring the pointer to still be here a
-  // moment later is enough to tell "someone paused on this" from "the strip moved under
-  // a parked cursor."
+  // asked for, each one starting and immediately stopping a different panel's video.
+  // Requiring the pointer to still be here a moment later is enough to tell "someone
+  // paused on this" from "the strip moved under a parked cursor."
   const HOVER_DWELL_MS = 120;
 
   const onPointerEnter = (event: React.PointerEvent) => {
@@ -895,15 +867,10 @@ function FilmstripPanel({
   const onPointerLeave = (event: React.PointerEvent) => {
     if (event.pointerType !== "mouse") return;
     // Only ever cancels a hover that hasn't activated yet. Deliberately does NOT shrink()
-    // an already-featured panel: a featured clip is meant to keep playing until it ends
-    // or the strip is dragged (see onEnded, and the drag-cancel over in Filmstrip) — not
-    // the instant a mouse drifts off it. That distinction matters because centering pulls
-    // a featured panel toward the middle of the screen, which — for a mouse parked
-    // anywhere off-center, most obviously near the edges — moves the panel out from under
-    // the pointer as a direct side effect of centering itself. Treating that as "the mouse
-    // left" used to shrink() the panel, autoplay would drag it right back under the same
-    // parked mouse, hover would fire again, and centering would push it away again: an
-    // endless back-and-forth exactly at the edges, which is what was reported.
+    // an already-featured panel: a featured clip is meant to keep playing until it ends,
+    // an arrow-nav click moves on, or the strip is dragged (see onEnded, and the
+    // drag-cancel over in Filmstrip) — not the instant a mouse drifts off it, which
+    // autoplay sliding the panel itself would trigger within a couple of seconds anyway.
     if (hoverTimer.current) {
       clearTimeout(hoverTimer.current);
       hoverTimer.current = null;
@@ -915,7 +882,7 @@ function FilmstripPanel({
   };
 
   // Touch and pen: there is nowhere left to navigate to, so a genuine tap (not a swipe
-  // that dragged the strip) toggles the panel bigger instead — the same feature a mouse
+  // that dragged the strip) toggles the video playing instead — the same feature a mouse
   // gets for free just by hovering.
   const onPointerUp = (event: React.PointerEvent) => {
     if (event.pointerType === "mouse") return;
@@ -953,27 +920,25 @@ function FilmstripPanel({
 export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCursor: (mode: CursorMode) => void }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  // Whichever panel is currently featured, so a drag-start (see the effect below) can
-  // force it to close instead of leaving the carousel stuck until that clip ends on its
-  // own — someone who decides mid-clip they'd rather move on can just swipe past it.
+  // Whichever panel is currently featured, so a drag-start or arrow-nav click (see the
+  // effect below) can force it to close instead of leaving the carousel stuck until that
+  // clip ends on its own — someone who decides mid-clip they'd rather move on can just
+  // swipe past it, or click an arrow, instead of waiting.
   const activePanelCancel = useRef<(() => void) | null>(null);
-  // Which panel to pull to the middle of the screen while it's featured — a panel the
-  // strip had scrolled halfway offscreen would otherwise just grow in place, half clipped
-  // by the edge of the carousel instead of presenting itself front and center.
-  const activePanelIndex = useRef<number | null>(null);
+  // Set by the effect below once it knows how to actually move the strip — the prev/next
+  // buttons are rendered here in the component body, outside that effect's closure.
+  const nudgeRef = useRef<((direction: 1 | -1) => void) | null>(null);
 
-  const handleActivate = (cancel: () => void, index: number) => {
+  const handleActivate = (cancel: () => void) => {
     // Enforces one featured panel at a time: if a different one was already open — most
     // often on touch, where tapping a new panel has no "leave" event to close the last
     // one — this closes it first rather than letting two clips play at once.
     activePanelCancel.current?.();
     activePanelCancel.current = cancel;
-    activePanelIndex.current = index;
   };
 
   const handleDeactivate = () => {
     activePanelCancel.current = null;
-    activePanelIndex.current = null;
   };
 
   // Repeated twice so the wrap point (see wrap() below) always lands on identical content
@@ -991,10 +956,12 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
 
     const panels = Array.from(track.children) as HTMLElement[];
     let singleWidth = 0;
+    let stepWidth = 0;
     let centers: number[] = [];
     let lit = -1;
     let position = 0;
     let velocity = 0;
+    let manualTarget: number | null = null;
     let dragging = false;
     let pointerId: number | null = null;
     let intentResolved = false;
@@ -1014,6 +981,10 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
     const measure = () => {
       singleWidth = track.scrollWidth / 2;
       centers = panels.map((panel) => panel.offsetLeft + panel.offsetWidth / 2);
+      // One card's width plus the gap after it — how far an arrow-nav click moves the
+      // strip. Taken from two consecutive centers rather than the card's own box so the
+      // track's gap is automatically included without reading it as a separate style.
+      stepWidth = centers.length > 1 ? centers[1] - centers[0] : 0;
     };
 
     // Keeps position inside (-singleWidth, 0] — past either edge, silently jump by one
@@ -1077,26 +1048,24 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
       lastFrameTime = time;
 
       if (!dragging) {
-        const centeringIndex = activePanelIndex.current;
-        const centerTarget = centeringIndex !== null ? centers[centeringIndex] : undefined;
-
-        if (centerTarget !== undefined) {
-          // A featured panel (hovered on desktop, tapped on mobile) is pulled to the
-          // middle of the screen — wherever the strip had it positioned when it was
-          // activated — instead of just growing in place, which could leave most of it
-          // clipped by the edge of the carousel if it was only half scrolled into view.
-          //
-          // The move is capped at MAX_CENTERING_PX_PER_MS regardless of how far away the
-          // panel is: eased-toward-a-target motion moves fastest exactly when it has the
-          // most ground to cover, so a panel activated near the far edge of the strip
-          // would otherwise cross the screen in a rush before settling — the strip
-          // visibly "flying" past whatever was in between.
-          const target = wrap(window.innerWidth / 2 - centerTarget);
-          const MAX_CENTERING_PX_PER_MS = 1.6;
-          const step = shortestDelta(position, target, singleWidth) * easeFactor(0.86, dt);
-          const cappedStep = Math.max(-MAX_CENTERING_PX_PER_MS * dt, Math.min(MAX_CENTERING_PX_PER_MS * dt, step));
+        if (manualTarget !== null) {
+          // An arrow-nav click is moving the strip by exactly one card. Capped regardless
+          // of distance for the same reason autoplay's own speed is fixed: an
+          // eased-toward-a-target move goes fastest exactly when it has the most ground
+          // to cover, so an uncapped version would visibly rush before settling.
+          const MAX_NUDGE_PX_PER_MS = 1.6;
+          const step = shortestDelta(position, manualTarget, singleWidth) * easeFactor(0.86, dt);
+          const cappedStep = Math.max(-MAX_NUDGE_PX_PER_MS * dt, Math.min(MAX_NUDGE_PX_PER_MS * dt, step));
           position = wrap(position + cappedStep);
           velocity = 0;
+          if (Math.abs(shortestDelta(position, manualTarget, singleWidth)) < 0.5) {
+            position = manualTarget;
+            manualTarget = null;
+          }
+        } else if (activePanelCancel.current) {
+          // A featured panel (hovered on desktop, tapped on mobile) holds the strip still
+          // so its clip can be watched in full — see grow()/onEnded() on FilmstripPanel,
+          // which is what clears activePanelCancel once that clip finishes.
         } else {
           // Autoplay's steady speed, or a stop when motion is reduced. Velocity eases
           // toward this target every frame — rather than decaying to zero and then
@@ -1111,6 +1080,17 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
       }
       lightNearest();
     };
+
+    // Exposed to the prev/next buttons, which live outside this effect's closure. A click
+    // is the same "move on" signal a drag is, so it closes whatever clip is playing too —
+    // otherwise clicking next while one is featured would do nothing, since the strip is
+    // deliberately held still for as long as activePanelCancel is set.
+    const nudge = (direction: 1 | -1) => {
+      activePanelCancel.current?.();
+      if (!stepWidth) return;
+      manualTarget = wrap(position - direction * stepWidth);
+    };
+    nudgeRef.current = nudge;
 
     measure();
     raf = requestAnimationFrame(loop);
@@ -1208,23 +1188,39 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
       track.removeEventListener("pointermove", onPointerMove);
       track.removeEventListener("pointerup", endDrag);
       track.removeEventListener("pointercancel", endDrag);
+      nudgeRef.current = null;
     };
   }, [projects]);
 
   return (
     <div className="filmstrip" ref={sectionRef}>
+      <button
+        type="button"
+        className="filmstrip-nav filmstrip-nav--prev"
+        aria-label="Vídeo anterior"
+        onClick={() => nudgeRef.current?.(-1)}
+      >
+        <FiChevronLeft />
+      </button>
       <div className="filmstrip__track" ref={trackRef}>
         {loopProjects.map((project, index) => (
           <FilmstripPanel
             key={`${project.slug}-${index}`}
             project={project}
-            index={index}
             setCursor={setCursor}
             onActivate={handleActivate}
             onDeactivate={handleDeactivate}
           />
         ))}
       </div>
+      <button
+        type="button"
+        className="filmstrip-nav filmstrip-nav--next"
+        aria-label="Próximo vídeo"
+        onClick={() => nudgeRef.current?.(1)}
+      >
+        <FiChevronRight />
+      </button>
     </div>
   );
 }

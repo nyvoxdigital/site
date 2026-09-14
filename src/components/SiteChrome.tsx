@@ -894,14 +894,20 @@ function FilmstripPanel({
 
   const onPointerLeave = (event: React.PointerEvent) => {
     if (event.pointerType !== "mouse") return;
+    // Only ever cancels a hover that hasn't activated yet. Deliberately does NOT shrink()
+    // an already-featured panel: a featured clip is meant to keep playing until it ends
+    // or the strip is dragged (see onEnded, and the drag-cancel over in Filmstrip) — not
+    // the instant a mouse drifts off it. That distinction matters because centering pulls
+    // a featured panel toward the middle of the screen, which — for a mouse parked
+    // anywhere off-center, most obviously near the edges — moves the panel out from under
+    // the pointer as a direct side effect of centering itself. Treating that as "the mouse
+    // left" used to shrink() the panel, autoplay would drag it right back under the same
+    // parked mouse, hover would fire again, and centering would push it away again: an
+    // endless back-and-forth exactly at the edges, which is what was reported.
     if (hoverTimer.current) {
       clearTimeout(hoverTimer.current);
       hoverTimer.current = null;
     }
-    // Only if grow() actually ran: with the dwell above, a pointerleave can now arrive
-    // before that timer ever fires, and shrink() unconditionally would clear whichever
-    // OTHER panel is genuinely featured right now (see handleDeactivate on Filmstrip).
-    if (active) shrink();
   };
 
   const onPointerDown = (event: React.PointerEvent) => {

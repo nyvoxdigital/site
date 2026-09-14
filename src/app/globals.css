@@ -489,15 +489,38 @@ main {
   transition: opacity 400ms ease;
 }
 
-.filmstrip-panel:hover,
 .filmstrip-panel--active {
   transform: translateY(-8px) scale(1.02);
   box-shadow: 0 20px 60px rgba(224, 66, 59, 0.35);
 }
 
-.filmstrip-panel:hover::before,
 .filmstrip-panel--active::before {
   opacity: 0.6;
+}
+
+/* Hover is deliberately gated behind a real pointer. iOS applies :hover on tap — sticky
+   hover — which lit the glow the instant a finger landed, before the clip had decoded a
+   thing, completely bypassing the --active class that's careful to wait for a real frame
+   (see FilmstripPanel). A mouse gets the same treatment through :hover; a touch gets it
+   only through --active, on the frame it's actually earned. */
+@media (hover: hover) and (pointer: fine) {
+  .filmstrip-panel:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(224, 66, 59, 0.35);
+  }
+
+  .filmstrip-panel:hover::before {
+    opacity: 0.6;
+  }
+
+  .filmstrip-panel:hover .filmstrip-panel__inner {
+    border-color: rgba(224, 66, 59, 0.6);
+  }
+
+  .filmstrip-panel:hover video {
+    transform: scale(1.08);
+    filter: brightness(1) saturate(1.05);
+  }
 }
 
 .filmstrip-panel__inner {
@@ -506,13 +529,18 @@ main {
   height: 100%;
   overflow: hidden;
   border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.05);
+  /* Opaque, and no backdrop-filter. Both matter: a translucent card with a blurred
+     backdrop pulls whatever sits behind it forward, and what sits behind it here is the
+     red glow above — so any moment the video had nothing decoded to paint (a seek, a
+     stall, the first instants after a tap) the blur smeared that glow across the entire
+     card as a solid red wash. The reference design's frosted look assumed a colourful
+     background worth blurring; this page is near-black, so it bought nothing and cost
+     exactly this bug. */
+  background: var(--paper);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
   transition: border-color 400ms ease;
 }
 
-.filmstrip-panel:hover .filmstrip-panel__inner,
 .filmstrip-panel--active .filmstrip-panel__inner {
   border-color: rgba(224, 66, 59, 0.6);
 }
@@ -538,7 +566,6 @@ main {
   transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1), filter 400ms ease;
 }
 
-.filmstrip-panel:hover video,
 .filmstrip-panel--active video,
 .filmstrip-panel--lit video {
   transform: scale(1.08);

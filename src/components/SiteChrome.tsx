@@ -492,6 +492,11 @@ export function CursorTrail() {
     };
 
     const onMove = (event: PointerEvent) => {
+      // Mouse only. A finger dragging across the screen fires pointermove exactly like a
+      // cursor does, so without this the trail scribbles itself across every swipe on a
+      // phone — where there's no cursor for it to be trailing in the first place.
+      if (event.pointerType !== "mouse") return;
+
       const now = performance.now();
       if (now - lastSpawn.current < SCRIBBLE_SPAWN_INTERVAL_MS) return;
       lastSpawn.current = now;

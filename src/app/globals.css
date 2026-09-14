@@ -102,6 +102,14 @@ main {
   }
 }
 
+/* Belt and braces alongside the pointerType check in CursorTrail: on anything without a
+   real cursor there is nothing for a cursor trail to trail, so it never renders at all. */
+@media (hover: none), (pointer: coarse) {
+  .cursor-trail {
+    display: none;
+  }
+}
+
 .cursor__preview {
   position: absolute;
   top: -74px;

@@ -323,7 +323,7 @@ main {
 .clients {
   position: relative;
   overflow: hidden;
-  padding: clamp(3rem, 6vw, 5rem) 0;
+  padding: clamp(1.2rem, 2.5vw, 2rem) 0;
   background: #050505;
   border-bottom: 1px solid var(--line);
 }
@@ -385,7 +385,7 @@ main {
 
 .clients img {
   flex: 0 0 auto;
-  height: clamp(3.5rem, 6vw, 6.5rem);
+  height: clamp(4.5rem, 7.5vw, 8rem);
   width: auto;
   filter: grayscale(1) brightness(0) invert(1);
   opacity: 0.72;
@@ -795,11 +795,11 @@ main {
      that floor regardless of how large the desktop max got. This gives mobile its own,
      bigger range instead of inheriting a value tuned for a much wider viewport. */
   .clients img {
-    height: clamp(6rem, 26vw, 9rem);
+    height: clamp(7rem, 30vw, 10rem);
   }
 
   .clients {
-    padding: clamp(3.5rem, 10vw, 5rem) 0;
+    padding: clamp(1.4rem, 4vw, 2.2rem) 0;
   }
 
   .hero {

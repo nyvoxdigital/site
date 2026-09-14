@@ -1,7 +1,7 @@
 "use client";
 
 import gsap from "gsap";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { FiArrowRight } from "react-icons/fi";
 import { hasRealFootage, projects } from "@/lib/works";
 
@@ -13,6 +13,7 @@ import {
   BackgroundVideo,
   Clients,
   Contact,
+  CONTACT,
   Cursor,
   CursorMode,
   Filmstrip,
@@ -63,6 +64,38 @@ function Portfolio({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   );
 }
 
+const PROJECT_TYPE_LABELS: Record<string, string> = {
+  foto: "Foto",
+  video: "Vídeo",
+  ambos: "Foto + vídeo"
+};
+
+// There's no backend to receive this form, so submitting it hands the whole briefing to
+// WhatsApp instead — pre-filled and ready to send, in the same place every other contact
+// link on the site already points to.
+function buildBriefingMessage(form: HTMLFormElement) {
+  const data = new FormData(form);
+  const tipo = PROJECT_TYPE_LABELS[String(data.get("tipo_projeto") ?? "")] ?? "não informado";
+
+  return [
+    "Olá! Vim pelo site e gostaria de um orçamento.",
+    "",
+    `Nome: ${data.get("nome")}`,
+    `E-mail: ${data.get("email")}`,
+    `O que precisa: ${tipo}`,
+    `Investimento: ${data.get("investimento")}`,
+    `Prazo: ${data.get("prazo") || "não informado"}`,
+    `Resumo do projeto: ${data.get("mensagem") || "não informado"}`
+  ].join("\n");
+}
+
+function handleBriefingSubmit(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+  const message = buildBriefingMessage(event.currentTarget);
+  const url = `https://wa.me/${CONTACT.whatsappNumber}?text=${encodeURIComponent(message)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
   return (
     <section className="hire" id="contrate">
@@ -78,7 +111,7 @@ function Hire({ setCursor }: { setCursor: (mode: CursorMode) => void }) {
         </p>
       </div>
 
-      <form className="hire__form" aria-label="Formulário para contratar">
+      <form className="hire__form" aria-label="Formulário para contratar" onSubmit={handleBriefingSubmit}>
         <div className="form-row">
           <label className="field">
             <span>Nome</span>

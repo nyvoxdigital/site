@@ -1225,7 +1225,7 @@ export function Clients() {
 
 // Contact identity for the studio's direct line, in one place — update here if the
 // person, number, or handle behind the site ever changes.
-const CONTACT = {
+export const CONTACT = {
   name: "Murilo Gonçalves",
   whatsappNumber: "5513997989477",
   whatsappLabel: "(13) 99798-9477",

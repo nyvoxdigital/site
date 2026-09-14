@@ -791,10 +791,14 @@ function FilmstripPanel({
   setCursor: (mode: CursorMode) => void;
   // Passes the panel's own shrink() up so the carousel can force it closed from outside —
   // specifically when a drag or an arrow-nav click starts, so someone who doesn't want to
-  // watch a featured clip through can just move on instead of waiting for it to end.
-  onActivate: (cancel: () => void) => void;
+  // watch a featured clip through can just move on instead of waiting for it to end. The
+  // element is only passed on a touch tap (see grow() below) so the carousel can pull
+  // that specific card to the middle of the screen — on mouse, hover already lands on
+  // whatever's under the pointer, so there's nothing to re-center.
+  onActivate: (cancel: () => void, centerOn?: HTMLElement | null) => void;
   onDeactivate: () => void;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -823,10 +827,10 @@ function FilmstripPanel({
   // than resuming wherever it last paused — this is a "watch the clip" feature, not a
   // resume, and it's meant to play through to the end exactly once (see the ended
   // handler below) every time, not an arbitrary partial view depending on history.
-  const grow = () => {
+  const grow = (center: boolean) => {
     setActive(true);
     setCursor("play");
-    onActivate(shrink);
+    onActivate(shrink, center ? panelRef.current : null);
     const video = videoRef.current;
     if (!video) return;
     video.currentTime = project.previewStart ?? 0;
@@ -893,7 +897,7 @@ function FilmstripPanel({
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => {
       hoverTimer.current = null;
-      grow();
+      grow(false);
     }, HOVER_DWELL_MS);
   };
 
@@ -916,7 +920,10 @@ function FilmstripPanel({
 
   // Touch and pen: there is nowhere left to navigate to, so a genuine tap (not a swipe
   // that dragged the strip) toggles the video playing instead — the same feature a mouse
-  // gets for free just by hovering.
+  // gets for free just by hovering. Also centers the card (grow(true)) — a mouse always
+  // hovers whatever's already on screen, but a tapped card can be sitting half off one
+  // edge of a phone screen, and there's no pointer position to "already be centered on"
+  // the way there sort of is with a cursor.
   const onPointerUp = (event: React.PointerEvent) => {
     if (event.pointerType === "mouse") return;
     const start = pointerStart.current;
@@ -924,11 +931,12 @@ function FilmstripPanel({
     if (!start) return;
     if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > TAP_TOLERANCE_PX) return;
     if (active) shrink();
-    else grow();
+    else grow(true);
   };
 
   return (
     <div
+      ref={panelRef}
       className={`filmstrip-panel${visible ? " filmstrip-panel--active" : ""}`}
       role="button"
       tabIndex={0}
@@ -988,20 +996,32 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
   // clip ends on its own — someone who decides mid-clip they'd rather move on can just
   // swipe past it, or click an arrow, instead of waiting.
   const activePanelCancel = useRef<(() => void) | null>(null);
+  // Where to pull the strip while a touch-activated panel is featured — see the loop
+  // effect below. Only ever set on touch: a mouse hover is already wherever the pointer
+  // is, so re-centering it would just drag the card out from under the cursor (which is
+  // exactly the desktop bug from the previous design of this feature). A tapped card has
+  // no such pointer position to already be near, and can legitimately be sitting half off
+  // one edge of a phone screen with nothing to bring it into view.
+  const centerTargetOffset = useRef<number | null>(null);
   // Set by the effect below once it knows how to actually move the strip — the prev/next
   // buttons are rendered here in the component body, outside that effect's closure.
   const nudgeRef = useRef<((direction: 1 | -1) => void) | null>(null);
 
-  const handleActivate = (cancel: () => void) => {
+  const handleActivate = (cancel: () => void, centerOn?: HTMLElement | null) => {
     // Enforces one featured panel at a time: if a different one was already open — most
     // often on touch, where tapping a new panel has no "leave" event to close the last
     // one — this closes it first rather than letting two clips play at once.
     activePanelCancel.current?.();
     activePanelCancel.current = cancel;
+    // Read once, not on every frame: the strip doesn't recycle cards while one is held
+    // featured (see the loop below), so this card's position can't change for as long as
+    // this value is going to be used.
+    centerTargetOffset.current = centerOn ? centerOn.offsetLeft + centerOn.offsetWidth / 2 : null;
   };
 
   const handleDeactivate = () => {
     activePanelCancel.current = null;
+    centerTargetOffset.current = null;
   };
 
   useEffect(() => {
@@ -1057,7 +1077,12 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
     // nothing visibly jumps. Same handful of real elements, forever: recycling the actual
     // cards is what makes the loop endless without ever duplicating the project list. Any
     // in-flight nudge target is shifted along with position so it keeps meaning the same
-    // physical spot after the reorder.
+    // physical spot after the reorder. centerTargetOffset gets the opposite adjustment:
+    // it's a snapshot of some OTHER card's offsetLeft (see handleActivate), and every card
+    // still in the DOM shifts by one step in the opposite direction of position whenever a
+    // card ahead of or behind it gets recycled — without this, a touch-centered card more
+    // than one step from center would drift off target the moment any card, anywhere in
+    // the strip, gets recycled mid-ease.
     const recycle = () => {
       if (!stepWidth || order.length < 2) return;
       let moved = false;
@@ -1067,6 +1092,7 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
         track.appendChild(first);
         position += stepWidth;
         if (manualTarget !== null) manualTarget += stepWidth;
+        if (centerTargetOffset.current !== null) centerTargetOffset.current -= stepWidth;
         moved = true;
       }
       while (position > 0) {
@@ -1075,6 +1101,7 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
         track.prepend(last);
         position -= stepWidth;
         if (manualTarget !== null) manualTarget -= stepWidth;
+        if (centerTargetOffset.current !== null) centerTargetOffset.current += stepWidth;
         moved = true;
       }
       if (moved) measure();
@@ -1135,6 +1162,19 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
           // A featured panel (hovered on desktop, tapped on mobile) holds the strip still
           // so its clip can be watched in full — see grow()/onEnded() on FilmstripPanel,
           // which is what clears activePanelCancel once that clip finishes.
+          //
+          // Touch only additionally pulls the card to the middle of the screen — set by
+          // handleActivate above — so a card tapped near an edge doesn't sit half clipped
+          // while its clip plays. Capped regardless of distance for the same reason the
+          // arrow-nav nudge above is: an eased-toward-a-target move goes fastest exactly
+          // when it has the most ground to cover, so an uncapped version would visibly
+          // rush the strip before settling.
+          if (centerTargetOffset.current !== null) {
+            const target = window.innerWidth / 2 - centerTargetOffset.current;
+            const MAX_CENTER_PX_PER_MS = 1.6;
+            const step = (target - position) * easeFactor(0.86, dt);
+            position += Math.max(-MAX_CENTER_PX_PER_MS * dt, Math.min(MAX_CENTER_PX_PER_MS * dt, step));
+          }
         } else {
           // Autoplay's steady speed, or a stop when motion is reduced. Velocity eases
           // toward this target every frame — rather than decaying to zero and then

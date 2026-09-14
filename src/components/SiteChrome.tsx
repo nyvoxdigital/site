@@ -811,7 +811,10 @@ function FilmstripPanel({
 }: {
   project: Project;
   setCursor: (mode: CursorMode) => void;
-  onActivate: () => void;
+  // Passes the panel's own shrink() up so the carousel can force it closed from outside —
+  // specifically when a drag starts, so someone who doesn't want to watch a featured clip
+  // through can just swipe past it instead of being stuck waiting for it to end.
+  onActivate: (cancel: () => void) => void;
   onDeactivate: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -824,7 +827,7 @@ function FilmstripPanel({
   const grow = () => {
     setActive(true);
     setCursor("play");
-    onActivate();
+    onActivate(shrink);
     const video = videoRef.current;
     if (video) {
       video.currentTime = 0;
@@ -899,13 +902,23 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const activeCount = useRef(0);
+  // Whichever panel is currently featured, so a drag-start (see the effect below) can
+  // force it to close instead of leaving the carousel stuck until that clip ends on its
+  // own — someone who decides mid-clip they'd rather move on can just swipe past it.
+  const activePanelCancel = useRef<(() => void) | null>(null);
 
-  const handleActivate = () => {
+  const handleActivate = (cancel: () => void) => {
+    // Enforces one featured panel at a time: if a different one was already open — most
+    // often on touch, where tapping a new panel has no "leave" event to close the last
+    // one — this closes it first rather than letting two clips play at once.
+    activePanelCancel.current?.();
     activeCount.current += 1;
+    activePanelCancel.current = cancel;
   };
 
   const handleDeactivate = () => {
     activeCount.current = Math.max(0, activeCount.current - 1);
+    activePanelCancel.current = null;
   };
 
   // Repeated twice so the wrap point (see wrap() below) always lands on identical content
@@ -1056,6 +1069,9 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
           dragging = true;
           track.setPointerCapture(pointerId);
           track.classList.add("filmstrip__track--dragging");
+          // A real carousel drag is a clear "move on" signal — close whatever clip is
+          // playing rather than leaving it stuck mid-watch while the strip slides under it.
+          activePanelCancel.current?.();
         }
       }
 

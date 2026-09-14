@@ -790,6 +790,14 @@ main {
     display: none;
   }
 
+  /* The shared clamp() on .clients img never grows past its own floor on a phone-width
+     screen (6vw stays under 3.5rem all the way up to ~930px wide), so mobile was stuck at
+     that floor regardless of how large the desktop max got. This gives mobile its own,
+     bigger range instead of inheriting a value tuned for a much wider viewport. */
+  .clients img {
+    height: clamp(4.5rem, 18vw, 7rem);
+  }
+
   .hero {
     min-height: 82svh;
     padding: 5rem 1rem 2rem;

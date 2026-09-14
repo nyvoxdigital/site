@@ -941,10 +941,6 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
     activePanelCancel.current = null;
   };
 
-  // Repeated twice so the wrap point (see wrap() below) always lands on identical content
-  // on both sides of the seam — the loop reads as endless instead of visibly restarting.
-  const loopProjects = [...projects, ...projects];
-
   useEffect(() => {
     const section = sectionRef.current;
     const track = trackRef.current;
@@ -954,8 +950,11 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
     const AUTOPLAY_PX_PER_MS = 0.045;
     const DRAG_THRESHOLD_PX = 8;
 
-    const panels = Array.from(track.children) as HTMLElement[];
-    let singleWidth = 0;
+    // The DOM order IS the loop: instead of duplicating the project list to fake an
+    // endless strip, the real handful of cards gets physically recycled from whichever
+    // end they scroll off of to the opposite end (see recycle() below) — infinite, with
+    // no repeats in the markup, and it scales to however many real projects there are.
+    let order = Array.from(track.children) as HTMLElement[];
     let stepWidth = 0;
     let centers: number[] = [];
     let lit = -1;
@@ -968,36 +967,54 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
     let horizontalIntent = false;
     let startX = 0;
     let startY = 0;
-    let startPosition = 0;
     let lastMoveTime = 0;
     let lastMoveX = 0;
     let lastFrameTime = 0;
     let onScreen = true;
     let raf = 0;
 
-    // Read once on mount/resize rather than every frame: measuring an element's box
-    // forces the browser to settle layout, and doing that 60 times a second for a
-    // continuously running animation is exactly what makes a phone stutter.
+    // Read once on mount/resize/recycle rather than every frame: measuring an element's
+    // box forces the browser to settle layout, and doing that 60 times a second for a
+    // continuously running animation is exactly what makes a phone stutter. Every card is
+    // the same fixed size (see .filmstrip-panel), so one measurement covers all of them.
     const measure = () => {
-      singleWidth = track.scrollWidth / 2;
-      centers = panels.map((panel) => panel.offsetLeft + panel.offsetWidth / 2);
-      // One card's width plus the gap after it — how far an arrow-nav click moves the
-      // strip. Taken from two consecutive centers rather than the card's own box so the
-      // track's gap is automatically included without reading it as a separate style.
-      stepWidth = centers.length > 1 ? centers[1] - centers[0] : 0;
-    };
-
-    // Keeps position inside (-singleWidth, 0] — past either edge, silently jump by one
-    // full repeat. Since the content past the jump is identical, nothing visibly moves.
-    const wrap = (value: number) => {
-      if (!singleWidth) return value;
-      let wrapped = value % singleWidth;
-      if (wrapped > 0) wrapped -= singleWidth;
-      return wrapped;
+      centers = order.map((panel) => panel.offsetLeft + panel.offsetWidth / 2);
+      const style = getComputedStyle(track);
+      const gap = parseFloat(style.columnGap || style.gap || "0") || 0;
+      stepWidth = order[0] ? order[0].offsetWidth + gap : 0;
     };
 
     const apply = () => {
       track.style.transform = `translate3d(${position}px, 0, 0)`;
+    };
+
+    // Keeps position within a single card's width of zero — the moment it would drift
+    // further, the card that just scrolled fully out of view is moved to the opposite end
+    // of the DOM instead, and position is adjusted by exactly one step to compensate, so
+    // nothing visibly jumps. Same handful of real elements, forever: recycling the actual
+    // cards is what makes the loop endless without ever duplicating the project list. Any
+    // in-flight nudge target is shifted along with position so it keeps meaning the same
+    // physical spot after the reorder.
+    const recycle = () => {
+      if (!stepWidth || order.length < 2) return;
+      let moved = false;
+      while (position <= -stepWidth) {
+        const first = order.shift()!;
+        order.push(first);
+        track.appendChild(first);
+        position += stepWidth;
+        if (manualTarget !== null) manualTarget += stepWidth;
+        moved = true;
+      }
+      while (position > 0) {
+        const last = order.pop()!;
+        order.unshift(last);
+        track.prepend(last);
+        position -= stepWidth;
+        if (manualTarget !== null) manualTarget -= stepWidth;
+        moved = true;
+      }
+      if (moved) measure();
     };
 
     // With no hover on a touch screen, nothing would otherwise mark a "featured" panel
@@ -1016,27 +1033,16 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
         }
       });
       if (nearest === lit) return;
-      panels[lit]?.classList.remove("filmstrip-panel--lit");
-      panels[nearest]?.classList.add("filmstrip-panel--lit");
+      order[lit]?.classList.remove("filmstrip-panel--lit");
+      order[nearest]?.classList.add("filmstrip-panel--lit");
       lit = nearest;
     };
 
     // How much of the remaining gap to a target closes per ~frame — used for both easing
-    // velocity toward its target (autoplay speed, or a stop) and easing position toward a
-    // panel being centered. One continuous formula for every transition between drag,
-    // coast, autoplay and centering means none of them can ever meet as a visible snap.
+    // velocity toward its target (autoplay speed, or a stop) and easing position toward
+    // an arrow-nav nudge. One continuous formula for every transition between drag,
+    // coast, autoplay and nudging means none of them can ever meet as a visible snap.
     const easeFactor = (perFrameRate: number, dt: number) => 1 - Math.pow(perFrameRate, dt / 16.67);
-
-    // Shortest signed distance from `from` to `to` around a loop of length `width` — the
-    // direct difference could mean sweeping all the way across the strip the long way
-    // round just because position happens to be wrapped near the opposite edge.
-    const shortestDelta = (from: number, to: number, width: number) => {
-      if (!width) return to - from;
-      let delta = (to - from) % width;
-      if (delta > width / 2) delta -= width;
-      if (delta < -width / 2) delta += width;
-      return delta;
-    };
 
     const loop = (time: number) => {
       raf = requestAnimationFrame(loop);
@@ -1054,11 +1060,11 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
           // eased-toward-a-target move goes fastest exactly when it has the most ground
           // to cover, so an uncapped version would visibly rush before settling.
           const MAX_NUDGE_PX_PER_MS = 1.6;
-          const step = shortestDelta(position, manualTarget, singleWidth) * easeFactor(0.86, dt);
+          const step = (manualTarget - position) * easeFactor(0.86, dt);
           const cappedStep = Math.max(-MAX_NUDGE_PX_PER_MS * dt, Math.min(MAX_NUDGE_PX_PER_MS * dt, step));
-          position = wrap(position + cappedStep);
+          position += cappedStep;
           velocity = 0;
-          if (Math.abs(shortestDelta(position, manualTarget, singleWidth)) < 0.5) {
+          if (Math.abs(manualTarget - position) < 0.5) {
             position = manualTarget;
             manualTarget = null;
           }
@@ -1074,8 +1080,9 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
           // heading) instead of visibly snapping when the two meet.
           const targetVelocity = calmer.matches ? 0 : -AUTOPLAY_PX_PER_MS;
           velocity += (targetVelocity - velocity) * easeFactor(0.94, dt);
-          position = wrap(position + velocity * dt);
+          position += velocity * dt;
         }
+        recycle();
         apply();
       }
       lightNearest();
@@ -1088,7 +1095,7 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
     const nudge = (direction: 1 | -1) => {
       activePanelCancel.current?.();
       if (!stepWidth) return;
-      manualTarget = wrap(position - direction * stepWidth);
+      manualTarget = position - direction * stepWidth;
     };
     nudgeRef.current = nudge;
 
@@ -1117,7 +1124,6 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
       pointerId = event.pointerId;
       startX = event.clientX;
       startY = event.clientY;
-      startPosition = position;
       velocity = 0;
       lastMoveTime = performance.now();
       lastMoveX = event.clientX;
@@ -1139,15 +1145,26 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
           track.setPointerCapture(pointerId);
           track.classList.add("filmstrip__track--dragging");
           // A real carousel drag is a clear "move on" signal — close whatever clip is
-          // playing rather than leaving it stuck mid-watch while the strip slides under it.
+          // playing, and cancel any pending arrow-nudge, rather than leaving either stuck
+          // mid-transition while the strip is now being moved by hand instead.
           activePanelCancel.current?.();
+          manualTarget = null;
         }
       }
 
       if (!horizontalIntent) return;
 
       event.preventDefault();
-      position = wrap(startPosition + dx);
+      // Movement since the last event, not since the drag started: recycle() can rewrite
+      // `position` mid-drag to compensate for a DOM reorder, and re-deriving it from a
+      // fixed start point every move would silently undo that compensation on the very
+      // next event — the strip would jump back by whatever the last recycle had adjusted.
+      position += event.clientX - lastMoveX;
+      // A drag can move several card-widths in one gesture, well past the single-step
+      // window recycle() otherwise keeps position in — it has to run here too, not just
+      // in the main loop, or dragging far enough would run past the last real card into
+      // empty space with nothing left in the DOM to fill it.
+      recycle();
       apply();
       lightNearest();
 
@@ -1203,9 +1220,9 @@ export function Filmstrip({ projects, setCursor }: { projects: Project[]; setCur
         <FiChevronLeft />
       </button>
       <div className="filmstrip__track" ref={trackRef}>
-        {loopProjects.map((project, index) => (
+        {projects.map((project) => (
           <FilmstripPanel
-            key={`${project.slug}-${index}`}
+            key={project.slug}
             project={project}
             setCursor={setCursor}
             onActivate={handleActivate}

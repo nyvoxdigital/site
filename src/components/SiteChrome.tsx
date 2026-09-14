@@ -1255,7 +1255,6 @@ export function Contact({ setCursor }: { setCursor: (mode: CursorMode) => void }
         <h2 className="reveal">
           <SplitText>Vamos criar algo que fique.</SplitText>
         </h2>
-        <p className="contact__person">{CONTACT.name}</p>
       </div>
       <nav aria-label="Links de contato">
         {links.map((link) => (

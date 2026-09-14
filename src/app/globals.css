@@ -349,10 +349,6 @@ main {
   background: linear-gradient(270deg, #050505, transparent);
 }
 
-.clients__viewport {
-  transform: translate3d(var(--scroll-drag, 0px), 0, 0);
-}
-
 .clients__track {
   display: flex;
   align-items: center;
@@ -376,10 +372,6 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .clients__track {
     animation: none;
-  }
-
-  .clients__viewport {
-    transform: none;
   }
 }
 

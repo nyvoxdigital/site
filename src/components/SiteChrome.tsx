@@ -410,9 +410,6 @@ export function useCinematicScroll() {
       if (Math.abs(skew - published) > 0.01) {
         published = skew;
         root.style.setProperty("--scroll-skew", `${skew.toFixed(2)}deg`);
-        // Same eased value, expressed as a distance, for things that slide rather than
-        // lean — it costs one more property write and keeps every reaction in step.
-        root.style.setProperty("--scroll-drag", `${(skew * 16).toFixed(1)}px`);
       }
     };
 
@@ -423,7 +420,6 @@ export function useCinematicScroll() {
     return () => {
       gsap.ticker.remove(update);
       root.style.removeProperty("--scroll-skew");
-      root.style.removeProperty("--scroll-drag");
       lenis.destroy();
     };
   }, []);
@@ -1238,14 +1234,15 @@ export const Clients = memo(function Clients() {
 
   return (
     <section className="clients" aria-label="Marcas que ja confiaram no trabalho">
-      {/* The track's own transform runs the endless loop, so the scroll reaction rides on
-          a wrapper instead of fighting it for the same property. */}
-      <div className="clients__viewport">
-        <div className="clients__track">
-          {loopBrands.map((brand, index) => (
-            <ClientLogo key={`${brand.name}-${index}`} {...brand} />
-          ))}
-        </div>
+      {/* No scroll-linked wrapper here on purpose: reacting to scroll meant updating this
+          element's transform from JS on every scroll frame, competing with — and, on a
+          loaded page, sometimes starving — the marquee's own independent CSS animation
+          on .clients__track below. A row that's supposed to never stop moving takes
+          priority over the lean effect other elements get. */}
+      <div className="clients__track">
+        {loopBrands.map((brand, index) => (
+          <ClientLogo key={`${brand.name}-${index}`} {...brand} />
+        ))}
       </div>
     </section>
   );

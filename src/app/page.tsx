@@ -17,7 +17,6 @@ import {
   Cursor,
   CursorMode,
   Filmstrip,
-  Magnetic,
   Scramble,
   SplitText,
   Stats,
@@ -170,17 +169,15 @@ const Hire = memo(function Hire({ setCursor }: { setCursor: (mode: CursorMode) =
           <textarea name="mensagem" placeholder="Marca, ideia, cidade, referência ou objetivo da campanha." />
         </label>
 
-        <Magnetic>
-          <button
-            className="hire__submit"
-            type="submit"
-            onMouseEnter={() => setCursor("link")}
-            onMouseLeave={() => setCursor("default")}
-          >
-            <Scramble>Enviar briefing</Scramble>
-            <FiArrowRight />
-          </button>
-        </Magnetic>
+        <button
+          className="hire__submit"
+          type="submit"
+          onMouseEnter={() => setCursor("link")}
+          onMouseLeave={() => setCursor("default")}
+        >
+          <Scramble>Enviar briefing</Scramble>
+          <FiArrowRight />
+        </button>
       </form>
     </section>
   );

@@ -538,6 +538,11 @@ export function Magnetic({ children, strength = 0.55 }: { children: ReactElement
     const yTo = gsap.quickTo(el, "y", { duration: 0.5, ease: "power3.out" });
 
     const move = (event: PointerEvent) => {
+      // Mouse only. On a touch screen pointermove fires only once the finger is already
+      // down, so the element slides out from under the tap that was aiming at it — and
+      // pointerleave frequently never arrives to put it back, leaving it parked off to
+      // one side. A magnetic pull needs a pointer that hovers; touch doesn't have one.
+      if (event.pointerType !== "mouse") return;
       const rect = el.getBoundingClientRect();
       xTo((event.clientX - (rect.left + rect.width / 2)) * strength);
       yTo((event.clientY - (rect.top + rect.height / 2)) * strength);

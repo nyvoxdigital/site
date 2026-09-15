@@ -2,6 +2,9 @@ import { ImageResponse } from "next/og";
 
 export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
+// Rendered once at build time rather than per request. The glyph is fixed, so there is
+// nothing to render live — and a static export refuses any route that stays dynamic.
+export const dynamic = "force-static";
 
 // A camera glyph built from plain shapes (ImageResponse renders a restricted CSS subset,
 // no SVG paths) — body, viewfinder bump, and a lens ring in the site's own accent red so
